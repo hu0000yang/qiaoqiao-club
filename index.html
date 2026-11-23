@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>好奇心俱乐部 - 探索伙伴</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        #bgCanvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
+        }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 4px; }
+        .tab-active {
+            background-color: #059669;
+            color: white;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+        }
+        button, input, select {
+            touch-action: manipulation;
+        }
+    </style>
+</head>
+<body id="mainBody" class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 font-sans text-gray-800 transition-colors duration-1000 relative overflow-x-hidden">
+
+    <!-- 背景微互动粒子画布 -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- 顶部配置与每日状态栏 -->
+    <header class="relative z-10 w-full max-w-6xl bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg flex flex-col xl:flex-row justify-between items-center gap-2.5 border border-white/60">
+        <div class="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-between xl:justify-start">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl" id="themeBadge">🌿</span>
+                <div>
+                    <h1 class="text-base sm:text-lg font-extrabold text-gray-800 tracking-tight flex items-center gap-2">
+                        好奇心俱乐部
+                        <span id="dailyStatusBadge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">今日学科果实：0/4</span>
+                    </h1>
+                    <p id="headerSubtitle" class="text-[11px] text-gray-500">布谷老师与贪吃蛇尼克 · 每天一个新发现</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" onclick="openParentModal()" title="设置孩子年龄、年级与各学科课本进度" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer min-h-[38px]">
+                    👨‍👩‍👧 家长后台
+                </button>
+                <button type="button" onclick="startNewDay()" title="开启新一天的探索记录" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer min-h-[38px]">
+                    🌅 开启新的一天
+                </button>
+                <button type="button" onclick="toggleSettingsPanel()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer min-h-[38px]">
+                    ⚙️ 模型设置
+                </button>
+            </div>
+        </div>
+
+        <!-- 模型与接口配置面板（自动读取 localStorage） -->
+        <div id="settingsBar" class="hidden xl:flex flex-wrap items-center gap-1.5 w-full xl:w-auto justify-end bg-gray-50/90 xl:bg-transparent p-2 xl:p-0 rounded-xl">
+            <input type="text" id="baseUrlInput" value="https://api.router.one/v1" placeholder="API 地址" class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg w-36 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <input type="text" id="modelInput" value="google/gemini-3-flash" placeholder="对话模型名" class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg w-36 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <input type="text" id="imageModelInput" value="" placeholder="生图模型(选填)" title="如支持图像生成的模型ID，留空则自动提示" class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg w-28 bg-white focus:outline-none focus:ring-2 focus:ring-purple-400">
+            <input type="password" id="apiKeyInput" placeholder="输入 sk-... 密钥" class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg w-28 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <button type="button" onclick="saveApiConfig()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-xs transition cursor-pointer">保存</button>
+        </div>
+    </header>
+
+    <!-- 家长后台设定弹窗（年龄、年级、各学科课本进度与难度阶梯） -->
+    <div id="parentModal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-3">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 sm:p-6 border border-indigo-100 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">👨‍👩‍👧</span>
+                    <div>
+                        <h2 class="text-base font-extrabold text-gray-800">家长后台 · 学习进度与难度匹配</h2>
+                        <p class="text-[11px] text-gray-500">布谷老师会根据这里的课本进度匹配题目，并随探索逐步升级难度</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeParentModal()" class="text-gray-400 hover:text-gray-600 text-lg font-bold px-2 cursor-pointer">✕</button>
+            </div>
+
+            <div class="space-y-3.5 mt-4 text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">孩子年龄（岁）</label>
+                        <input type="number" id="parentAgeInput" min="5" max="15" value="9" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">当前年级</label>
+                        <select id="parentGradeInput" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <option value="小学一年级">小学一年级</option>
+                            <option value="小学二年级">小学二年级</option>
+                            <option value="小学三年级" selected>小学三年级</option>
+                            <option value="小学四年级">小学四年级</option>
+                            <option value="小学五年级">小学五年级</option>
+                            <option value="小学六年级">小学六年级</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-indigo-50/60 p-3 rounded-2xl border border-indigo-100 space-y-2.5">
+                    <div class="font-bold text-indigo-900 flex items-center justify-between">
+                        <span>📚 各学科当前课本进度（AI 出题依据）</span>
+                        <span class="text-[10px] font-normal text-indigo-600">可随时按学期单元更新</span>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-blue-700 mb-1">📐 数学课本进度</label>
+                        <input type="text" id="progMathInput" placeholder="例如：三上·万以内加减法、倍的认识、长方形周长" class="w-full px-3 py-1.5 border border-blue-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-rose-700 mb-1">📖 语文课本进度</label>
+                        <input type="text" id="progChineseInput" placeholder="例如：三上·童话想象单元、观察日记、修辞与阅读理解" class="w-full px-3 py-1.5 border border-rose-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-purple-700 mb-1">🔤 英语课本进度</label>
+                        <input type="text" id="progEnglishInput" placeholder="例如：三上·打招呼、文具与颜色、动物与日常问答" class="w-full px-3 py-1.5 border border-purple-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-emerald-700 mb-1">🔬 科学课本进度</label>
+                        <input type="text" id="progScienceInput" placeholder="例如：三上·水的三态变化、空气占据空间、天气观察" class="w-full px-3 py-1.5 border border-emerald-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                    </div>
+                </div>
+
+                <div class="bg-amber-50/70 p-3 rounded-2xl border border-amber-100 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-bold text-amber-900">📈 当前自适应挑战阶梯：Lv.<span id="parentLevelDisplay">1</span></div>
+                        <div class="text-[11px] text-amber-700">每完成一个学科或成功探索，难度会自动微调升级；也可手动重置</div>
+                    </div>
+                    <button type="button" onclick="resetAdaptiveLevel()" class="bg-white hover:bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-lg font-bold shrink-0 cursor-pointer">重置为 Lv.1</button>
+                </div>
+            </div>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" onclick="closeParentModal()" class="px-4 py-2 rounded-xl text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">取消</button>
+                <button type="button" onclick="saveParentSettings()" class="px-5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer">保存并同步给布谷老师</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主工作区：左侧贪吃蛇尼克成长路径 + 右侧双模式探索台 -->
+    <div class="relative z-10 w-full max-w-6xl flex flex-col lg:flex-row gap-3 my-2.5 flex-1 items-stretch">
+        
+        <!-- 左侧：贪吃蛇尼克成长与四科果实面板 -->
+        <aside class="lg:w-80 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-lg flex flex-col justify-between border border-white/60">
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-0.5 rounded-full">🐍 探索伙伴 · 贪吃蛇尼克</span>
+                    <span id="snakeMoodLabel" class="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">状态：等待出发</span>
+                </div>
+                
+                <!-- 尼克对话气泡 -->
+                <p id="snakeBubble" class="text-xs text-gray-700 bg-emerald-50/90 border border-emerald-100 p-2.5 rounded-xl mb-2.5 leading-relaxed text-center">
+                    “嗨！我是贪吃蛇尼克！路径上有数学、语文、英语、科学4颗能量果实，每完成一门探索我就会向前爬行并变长一节哦！”
+                </p>
+
+                <!-- Canvas 画布：连续弯曲路径 + 4颗学科果实 + 尼克实时移动伸长 -->
+                <div class="relative w-full bg-gradient-to-b from-amber-50/50 via-emerald-50/40 to-teal-50/60 rounded-2xl border border-emerald-100/80 overflow-hidden shadow-inner flex items-center justify-center cursor-pointer" onclick="snakeInteract()" title="点一点贪吃蛇尼克">
+                    <canvas id="snakeCanvas" width="260" height="285" class="w-full h-[270px] object-contain"></canvas>
+                    <div class="absolute bottom-2 left-2.5 text-[11px] font-bold text-amber-700 bg-white/90 px-2 py-0.5 rounded-md shadow-2xs">
+                        🍎 今日果实：<span id="fruitCount">0</span> / 4
+                    </div>
+                    <div class="absolute bottom-2 right-2.5 text-[11px] font-bold text-emerald-700 bg-white/90 px-2 py-0.5 rounded-md shadow-2xs">
+                        🌿 尼克身长：<span id="snakeSegmentsText">4</span> 节
+                    </div>
+                </div>
+
+                <!-- 四科果实点亮状态徽章条 -->
+                <div class="grid grid-cols-4 gap-1.5 mt-2.5 text-center text-[11px] font-bold">
+                    <div id="badge-数学" class="py-1 px-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 transition">📐 数学</div>
+                    <div id="badge-语文" class="py-1 px-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 transition">📖 语文</div>
+                    <div id="badge-英语" class="py-1 px-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 transition">🔤 英语</div>
+                    <div id="badge-科学" class="py-1 px-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 transition">🔬 科学</div>
+                </div>
+            </div>
+
+            <!-- 底部今日状态与语音朗读开关 -->
+            <div class="flex flex-col w-full gap-2 mt-3 pt-2.5 border-t border-gray-100">
+                <div class="bg-gray-50 rounded-xl p-2 text-[11px] text-gray-600 flex items-center justify-between">
+                    <span>当前探索：</span>
+                    <span id="todayTopicDisplay" class="font-bold text-emerald-700 truncate max-w-[150px]">尚未选定学科</span>
+                </div>
+                <button type="button" id="ttsToggleBtn" onclick="toggleTTS()" class="w-full py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition cursor-pointer min-h-[38px]">
+                    🔊 布谷老师朗读：已开启
+                </button>
+            </div>
+        </aside>
+
+        <!-- 右侧：基础探索区 & 兴趣自由探索区 -->
+        <main id="mainWorkbench" class="flex-1 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl flex flex-col h-[72vh] lg:h-[76vh] overflow-hidden border border-white/60 transition-colors duration-500">
+            
+            <!-- 模式切换栏 + 学科/功能快捷入口 -->
+            <div class="bg-gray-50/95 px-3 py-2 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
+                <!-- 双空间切换 -->
+                <div class="flex items-center gap-1.5 bg-gray-200/70 p-1 rounded-xl text-xs font-bold">
+                    <button type="button" id="tabBaseBtn" onclick="switchMode('base')" class="tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]">
+                        🧭 今日基础探索
+                    </button>
+                    <button type="button" id="tabInterestBtn" onclick="switchMode('interest')" class="text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]">
+                        ✨ 兴趣世界 <span id="interestLockIcon">🔒</span>
+                    </button>
+                </div>
+
+                <!-- 学科入口 & 今日成长卡（集齐4颗果实后解锁闪亮状态） -->
+                <div id="baseSubjectBar" class="flex items-center gap-1.5 text-xs font-bold overflow-x-auto">
+                    <button type="button" id="btnSub-数学" onclick="startSubjectExplore('数学')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">📐 数学</button>
+                    <button type="button" id="btnSub-语文" onclick="startSubjectExplore('语文')" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">📖 语文</button>
+                    <button type="button" id="btnSub-英语" onclick="startSubjectExplore('英语')" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">🔤 英语</button>
+                    <button type="button" id="btnSub-科学" onclick="startSubjectExplore('科学')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">🔬 科学</button>
+                    <button type="button" id="growthCardBtn" onclick="requestGrowthCard()" class="bg-gray-300 text-gray-600 px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1 min-h-[36px]">
+                        <span id="growthCardIcon">🔒</span> 今日成长卡
+                    </button>
+                </div>
+
+                <!-- 兴趣世界顶部操作（仅在兴趣模式下显示） -->
+                <div id="interestTopBar" class="hidden items-center gap-1.5 text-xs font-bold flex-wrap">
+                    <button type="button" onclick="toggleInterestWorldDrawer()" class="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1.5 rounded-xl transition cursor-pointer min-h-[36px]">🗺️ 更换故事主题</button>
+                    <button type="button" onclick="requestStoryIllustration()" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">🎨 为故事配插图</button>
+                    <button type="button" onclick="requestGrowthCard()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">💌 今日成长卡</button>
+                </div>
+            </div>
+
+            <!-- 兴趣世界主题选择与进阶探索面板（仅在兴趣模式下展示） -->
+            <div id="interestWorldPanel" class="hidden bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 px-4 py-3 border-b border-purple-100">
+                <div class="flex items-center justify-between mb-2">
+                    <span id="interestAtmosphereBanner" class="text-[11px] font-bold text-purple-900">✨ 兴趣世界说明：集齐4科能量果实后解锁！在这里布谷老师会结合你学过的知识，带你向更深、更有挑战的拓展领域探险，也可以自由提问和编故事。</span>
+                </div>
+                <div id="interestLockBanner" class="hidden mb-2.5 bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded-xl text-xs flex items-center justify-between gap-2">
+                    <span>🌱 <strong>预览模式：</strong>帮贪吃蛇尼克吃掉路径上的全部 4 颗学科果实（数学、语文、英语、科学），就能正式开启完整自由的兴趣冒险啦！</span>
+                    <button type="button" onclick="switchMode('base')" class="bg-amber-500 text-white px-2.5 py-1 rounded-lg font-bold shrink-0 cursor-pointer">去收集学科果实</button>
+                </div>
+
+                <div id="worldSelectorButtons" class="flex flex-wrap gap-1.5 mb-2">
+                    <button type="button" onclick="selectInterestWorld('恐龙世界')" class="bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🦕 恐龙世界</button>
+                    <button type="button" onclick="selectInterestWorld('神话世界')" class="bg-white hover:bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🐉 神话世界</button>
+                    <button type="button" onclick="selectInterestWorld('魔法与奇幻世界')" class="bg-white hover:bg-purple-50 border border-purple-200 text-purple-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🪄 魔法与奇幻</button>
+                    <button type="button" onclick="selectInterestWorld('自然探索')" class="bg-white hover:bg-teal-50 border border-teal-200 text-teal-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🌿 自然探索</button>
+                    <button type="button" onclick="selectInterestWorld('工程与建造')" class="bg-white hover:bg-blue-50 border border-blue-200 text-blue-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🏗️ 工程与建造</button>
+                    <button type="button" onclick="selectInterestWorld('故事创作')" class="bg-white hover:bg-rose-50 border border-rose-200 text-rose-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">✍️ 故事创作</button>
+                </div>
+
+                <!-- 独立故事状态与探索深度栏 -->
+                <div id="storyMemoryCard" class="bg-white/85 rounded-xl p-2 border border-purple-100 text-[11px] text-gray-600 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <span class="font-bold text-purple-700">当前世界：</span><span id="storyWorldName">未选择</span>
+                        <span class="mx-1.5 text-gray-300">|</span>
+                        <span class="font-bold text-indigo-700">所在场景：</span><span id="storySceneName">等待开启冒险</span>
+                        <span class="mx-1.5 text-gray-300">|</span>
+                        <span class="font-bold text-pink-700">探索深度：</span><span id="storyDepthLabel">第 1 阶段</span>
+                    </div>
+                    <div class="text-purple-600 font-medium" id="storyCluesCount">已记录线索：0 条</div>
+                </div>
+            </div>
+
+            <!-- 聊天与探索滚动区 -->
+            <div id="chatContainer" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
+
+            <!-- 基础学科节点结束确认条（完成当前学科时吃掉对应果实） -->
+            <div id="dailyConfirmBar" class="hidden px-4 py-2.5 bg-amber-50 border-t border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <span id="dailyConfirmText" class="text-xs font-bold text-amber-900">🌟 太棒了！你已经完成了当前学科的核心探索，要让尼克吃掉这颗能量果实吗？</span>
+                <div class="flex gap-2 shrink-0">
+                    <button type="button" id="eatFruitConfirmBtn" onclick="confirmEatSubjectFruit()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs cursor-pointer min-h-[40px]">
+                        🍎 吃掉果实，继续下一科
+                    </button>
+                    <button type="button" onclick="continueDailyExploration()" class="bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer min-h-[40px]">
+                        🔍 再挑战一道升级题
+                    </button>
+                </div>
+            </div>
+
+            <!-- 兴趣世界阶段结束节点提示条（由孩子自主选择继续进阶或结束） -->
+            <div id="interestNodeBar" class="hidden px-4 py-2.5 bg-purple-50 border-t border-purple-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <span id="interestNodeText" class="text-xs font-bold text-purple-900">🧭 冒险节点达成！你已经解开了这一阶段的奥秘，接下来你想怎么选？</span>
+                <div class="flex gap-2 shrink-0">
+                    <button type="button" onclick="continueInterestDeepExplore()" class="bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs cursor-pointer min-h-[40px]">
+                        🚀 继续深入，挑战更高难度
+                    </button>
+                    <button type="button" onclick="finishInterestSession()" class="bg-white hover:bg-purple-100 text-purple-800 border border-purple-300 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer min-h-[40px]">
+                        🏁 结束本次探险并生成总结
+                    </button>
+                </div>
+            </div>
+
+            <!-- 图片预览暂存条 -->
+            <div id="imagePreviewBar" class="hidden px-4 py-2 bg-blue-50/90 border-t border-blue-100 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                    <img id="pendingImageThumb" src="" alt="待发送图片" class="w-12 h-12 object-cover rounded-lg border border-blue-200 shadow-2xs">
+                    <div class="text-xs">
+                        <div class="font-bold text-blue-800">已准备好观察图片</div>
+                        <div class="text-[11px] text-blue-600">输入你想和布谷老师聊的内容，或直接点发送一起观察！</div>
+                    </div>
+                </div>
+                <button type="button" onclick="clearPendingImage()" class="text-xs text-gray-500 hover:text-rose-600 px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 cursor-pointer">取消图片 ✕</button>
+            </div>
+
+            <!-- 快捷选项胶囊栏（固定在对话框正上方，横向大按钮方便 iPad 触控点选） -->
+            <div id="quickChoiceBar" class="hidden px-3 py-2.5 bg-gradient-to-r from-slate-50 via-white to-slate-50 border-t border-gray-100 flex flex-wrap items-center justify-center gap-2 sm:gap-3 shadow-2xs"></div>
+
+            <!-- 语音识别状态与修改确认条 -->
+            <div id="voiceStatusBar" class="hidden px-4 py-2 bg-rose-50 border-t border-rose-100 flex items-center justify-between gap-2 text-xs">
+                <span id="voiceStatusText" class="text-rose-700 font-bold flex items-center gap-1.5">🎙️ 正在聆听你的声音...</span>
+                <button type="button" onclick="stopVoiceRecognition()" class="bg-rose-500 text-white px-3 py-1.5 rounded-lg font-bold cursor-pointer">完成说话</button>
+            </div>
+
+            <!-- 底部输入、图片上传与语音区 -->
+            <div class="p-2.5 sm:p-3 bg-white border-t border-gray-100 flex items-center gap-2">
+                <input type="file" id="imageFileInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                <button type="button" onclick="document.getElementById('imageFileInput').click()" title="上传照片、画作或自然观察图片" class="w-11 h-11 shrink-0 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center text-lg transition cursor-pointer">
+                    📷
+                </button>
+
+                <button type="button" id="micBtn" onclick="toggleVoiceInput()" title="点击说话（识别后可修改再发送；iPad 也可用键盘自带听写）" class="w-11 h-11 shrink-0 rounded-xl bg-gray-100 hover:bg-emerald-100 text-gray-700 hover:text-emerald-700 flex items-center justify-center text-lg transition cursor-pointer">
+                    🎤
+                </button>
+
+                <input type="text" id="userInput" placeholder="直接点选项按钮，或用 iPad 键盘/语音输入..." class="flex-1 px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm sm:text-base bg-gray-50 min-h-[44px]" onkeypress="handleKeyPress(event)">
+                
+                <button type="button" id="sendBtn" onclick="sendMessage()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition shrink-0 cursor-pointer min-h-[44px]">
+                    发送 🚀
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <footer class="relative z-10 text-white/90 text-[11px] text-center drop-shadow-xs">
+        💡 好奇心俱乐部 · 布谷老师与贪吃蛇尼克陪伴探索（支持 iPad Safari 添加到主屏幕全屏使用）
+    </footer>
+
+    <script>
+        // ==================== 1. 动态背景与粒子 ====================
+        const THEMES = [
+            { name: "森林晨光", bg: "from-teal-500 via-emerald-600 to-cyan-700", badge: "🌿", particleColor: "rgba(255,255,255,0.35)" },
+            { name: "奇幻星海", bg: "from-indigo-500 via-purple-600 to-blue-700", badge: "✨", particleColor: "rgba(255,255,220,0.4)" },
+            { name: "暖阳花谷", bg: "from-emerald-500 via-teal-600 to-indigo-600", badge: "🦋", particleColor: "rgba(255,255,255,0.4)" }
+        ];
+        const currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
+        document.getElementById("mainBody").classList.add("bg-gradient-to-br", ...currentTheme.bg.split(" "));
+        document.getElementById("themeBadge").innerText = currentTheme.badge;
+
+        const bgCanvas = document.getElementById("bgCanvas");
+        const bgCtx = bgCanvas.getContext("2d");
+        let bgParticles = [];
+        function resizeBg() { bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight; }
+        window.addEventListener("resize", resizeBg);
+        resizeBg();
+
+        for (let i = 0; i < 22; i++) {
+            bgParticles.push({
+                x: Math.random() * bgCanvas.width, y: Math.random() * bgCanvas.height,
+                r: Math.random() * 4 + 2, vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35
+            });
+        }
+        function animateBg() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            bgCtx.fillStyle = currentTheme.particleColor;
+            bgParticles.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0 || p.x > bgCanvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > bgCanvas.height) p.vy *= -1;
+                bgCtx.beginPath(); bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2); bgCtx.fill();
+            });
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+        // ==================== 2. 独立状态管理系统 ====================
+        const STORAGE_KEYS = {
+            API_KEY: "ro_api_key",
+            BASE_URL: "ro_base_url",
+            MODEL: "ro_model",
+            IMAGE_MODEL: "ro_image_model",
+            DAILY_STATE: "cc_daily_state_v2",
+            SNAKE_STATE: "cc_snake_state_v2",
+            STORY_STATE: "cc_story_state_v2",
+            LEARNER_PROFILE: "cc_learner_profile_v2",
+            BASE_CHAT: "cc_base_chat_v2",
+            INTEREST_CHAT: "cc_interest_chat_v2"
+        };
+
+        const SUBJECT_NODES = [
+            { name: "数学", icon: "📐", color: "#3B82F6", t: 0.34 },
+            { name: "语文", icon: "📖", color: "#F43F5E", t: 0.52 },
+            { name: "英语", icon: "🔤", color: "#A855F7", t: 0.70 },
+            { name: "科学", icon: "🔬", color: "#10B981", t: 0.88 }
+        ];
+
+        const WORLD_ATMOSPHERES = {
+            "恐龙世界": { banner: "🦕 恐龙世界 · 穿越史前丛林与火山谷，观察恐龙习性与自然奥秘（支持自由提问和编故事）", panelClass: "bg-gradient-to-r from-emerald-50 via-lime-50 to-amber-50 border-emerald-200", accentText: "text-emerald-900" },
+            "神话世界": { banner: "🐉 神话世界 · 走进云海天宫与神兽秘境，和传说角色对话并解开谜题", panelClass: "bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 border-amber-200", accentText: "text-amber-900" },
+            "魔法与奇幻世界": { banner: "🪄 魔法与奇幻 · 点亮星辰法阵与会说话的物件，探索奇妙规则与想象力", panelClass: "bg-gradient-to-r from-purple-50 via-fuchsia-50 to-indigo-50 border-purple-200", accentText: "text-purple-900" },
+            "自然探索": { banner: "🌿 自然探索 · 潜入深海、雨林与星空，像小科学家一样观察和提问", panelClass: "bg-gradient-to-r from-teal-50 via-cyan-50 to-emerald-50 border-teal-200", accentText: "text-teal-900" },
+            "工程与建造": { banner: "🏗️ 工程与建造 · 设计桥梁、太空站与机关装置，动手思考结构与原理", panelClass: "bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 border-blue-200", accentText: "text-blue-900" },
+            "故事创作": { banner: "✍️ 故事创作 · 和布谷老师与尼克接龙编故事，自由发挥创意与角色对话", panelClass: "bg-gradient-to-r from-rose-50 via-pink-50 to-amber-50 border-rose-200", accentText: "text-rose-900" }
+        };
+
+        function getTodayStr() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+
+        let dailyState = {
+            date: getTodayStr(),
+            status: "NOT_STARTED",
+            currentSubject: "",
+            subjectTurns: { "数学": 0, "语文": 0, "英语": 0, "科学": 0 },
+            completedSubjects: [],
+            growthCardUnlocked: false
+        };
+
+        let snakeState = {
+            segments: 4,
+            totalFruitsEaten: 0,
+            mood: "companion",
+            currentHeadT: 0.16,
+            targetHeadT: 0.16,
+            growAnimProgress: 0,
+            collectAnimTimer: 0,
+            lastEatLabel: ""
+        };
+
+        let storyState = {
+            worldSetting: "",
+            mainCharacters: "探索者、布谷老师与贪吃蛇尼克",
+            currentScene: "",
+            discoveredClues: [],
+            keyDecisions: [],
+            storyProgress: "",
+            depthStage: 1,
+            stageTurns: 0,
+            waitingNodeChoice: false
+        };
+
+        let learnerProfile = {
+            age: 9,
+            grade: "小学三年级",
+            subjectProgress: {
+                "数学": "三上·万以内加减法、倍的认识、长方形和正方形周长",
+                "语文": "三上·童话想象单元、观察日记、积累好词好句与阅读理解",
+                "英语": "三上·日常问候、颜色文具、家庭与动物词汇及简单问答",
+                "科学": "三上·水的三态变化、空气的性质、常见动植物与天气观察"
+            },
+            adaptiveLevel: 1,
+            exploredInterests: []
+        };
+
+        let baseChatHistory = [];
+        let interestChatHistory = [];
+        let currentMode = "base";
+        let pendingImageBase64 = null;
+        let ttsEnabled = true;
+        let isSendingRequest = false;
+        let isEatingFruitLock = false;
+
+        function normalizeCompletedSubjects(list) {
+            if (!Array.isArray(list)) return [];
+            const valid = ["数学", "语文", "英语", "科学"];
+            return [...new Set(list.filter(s => valid.includes(s)))];
+        }
+
+        function computeTargetHeadT() {
+            const count = normalizeCompletedSubjects(dailyState.completedSubjects).length;
+            if (count === 0) return 0.16;
+            if (count >= 4) return 0.93;
+            return SUBJECT_NODES[count - 1].t;
+        }
+
+        function loadAllStates() {
+            const savedKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || "";
+            const savedBase = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
+            const savedModel = localStorage.getItem(STORAGE_KEYS.MODEL) || "google/gemini-3-flash";
+            const savedImgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || "";
+
+            if (savedKey) document.getElementById("apiKeyInput").value = "********";
+            document.getElementById("baseUrlInput").value = savedBase;
+            document.getElementById("modelInput").value = savedModel;
+            document.getElementById("imageModelInput").value = savedImgModel;
+
+            try {
+                const sSnake = JSON.parse(localStorage.getItem(STORAGE_KEYS.SNAKE_STATE));
+                if (sSnake && typeof sSnake.segments === "number") {
+                    snakeState = { ...snakeState, ...sSnake, growAnimProgress: 0, collectAnimTimer: 0 };
+                }
+            } catch (e) {}
+
+            try {
+                const sStory = JSON.parse(localStorage.getItem(STORAGE_KEYS.STORY_STATE));
+                if (sStory) storyState = {
+                    ...storyState,
+                    ...sStory,
+                    discoveredClues: Array.isArray(sStory.discoveredClues) ? sStory.discoveredClues : [],
+                    keyDecisions: Array.isArray(sStory.keyDecisions) ? sStory.keyDecisions : []
+                };
+            } catch (e) {}
+
+            try {
+                const sProfile = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEARNER_PROFILE));
+                if (sProfile) {
+                    learnerProfile = {
+                        ...learnerProfile,
+                        ...sProfile,
+                        subjectProgress: { ...learnerProfile.subjectProgress, ...(sProfile.subjectProgress || {}) },
+                        exploredInterests: Array.isArray(sProfile.exploredInterests) ? sProfile.exploredInterests : []
+                    };
+                }
+            } catch (e) {}
+
+            const today = getTodayStr();
+            let loadedDaily = null;
+            try {
+                loadedDaily = JSON.parse(localStorage.getItem(STORAGE_KEYS.DAILY_STATE));
+            } catch (e) {}
+
+            if (loadedDaily && loadedDaily.date === today) {
+                const cleanCompleted = normalizeCompletedSubjects(loadedDaily.completedSubjects);
+                dailyState = {
+                    ...dailyState,
+                    ...loadedDaily,
+                    subjectTurns: { "数学": 0, "语文": 0, "英语": 0, "科学": 0, ...(loadedDaily.subjectTurns || {}) },
+                    completedSubjects: cleanCompleted,
+                    growthCardUnlocked: Boolean(loadedDaily.growthCardUnlocked || cleanCompleted.length >= 4)
+                };
+                try {
+                    baseChatHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.BASE_CHAT)) || [];
+                    interestChatHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.INTEREST_CHAT)) || [];
+                } catch (e) {}
+            } else {
+                dailyState = {
+                    date: today,
+                    status: "NOT_STARTED",
+                    currentSubject: "",
+                    subjectTurns: { "数学": 0, "语文": 0, "英语": 0, "科学": 0 },
+                    completedSubjects: [],
+                    growthCardUnlocked: false
+                };
+                baseChatHistory = [];
+                try {
+                    interestChatHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.INTEREST_CHAT)) || [];
+                } catch (e) {}
+                saveAllStates();
+            }
+
+            const expectedSegments = 4 + dailyState.completedSubjects.length * 2;
+            if (snakeState.segments < expectedSegments) {
+                snakeState.segments = expectedSegments;
+            }
+
+            const tPos = computeTargetHeadT();
+            snakeState.currentHeadT = tPos;
+            snakeState.targetHeadT = tPos;
+            currentMode = "base";
+        }
+
+        function saveAllStates() {
+            dailyState.completedSubjects = normalizeCompletedSubjects(dailyState.completedSubjects);
+            if (dailyState.completedSubjects.length >= 4) {
+                dailyState.growthCardUnlocked = true;
+            }
+            localStorage.setItem(STORAGE_KEYS.DAILY_STATE, JSON.stringify(dailyState));
+            localStorage.setItem(STORAGE_KEYS.SNAKE_STATE, JSON.stringify({
+                segments: snakeState.segments,
+                totalFruitsEaten: snakeState.totalFruitsEaten,
+                mood: snakeState.mood,
+                currentHeadT: snakeState.targetHeadT,
+                targetHeadT: snakeState.targetHeadT
+            }));
+            localStorage.setItem(STORAGE_KEYS.STORY_STATE, JSON.stringify(storyState));
+            localStorage.setItem(STORAGE_KEYS.LEARNER_PROFILE, JSON.stringify(learnerProfile));
+            localStorage.setItem(STORAGE_KEYS.BASE_CHAT, JSON.stringify(baseChatHistory.slice(-28)));
+            localStorage.setItem(STORAGE_KEYS.INTEREST_CHAT, JSON.stringify(interestChatHistory.slice(-28)));
+        }
+
+        function toggleSettingsPanel() {
+            const bar = document.getElementById("settingsBar");
+            bar.classList.toggle("hidden");
+            bar.classList.toggle("flex");
+        }
+
+        function saveApiConfig() {
+            const keyVal = document.getElementById("apiKeyInput").value.trim();
+            const baseVal = document.getElementById("baseUrlInput").value.trim();
+            const modelVal = document.getElementById("modelInput").value.trim();
+            const imgModelVal = document.getElementById("imageModelInput").value.trim();
+
+            if (keyVal && !keyVal.includes("*")) {
+                localStorage.setItem(STORAGE_KEYS.API_KEY, keyVal);
+                document.getElementById("apiKeyInput").value = "********";
+            }
+            if (baseVal) localStorage.setItem(STORAGE_KEYS.BASE_URL, baseVal.replace(/\/+$/, ""));
+            if (modelVal) localStorage.setItem(STORAGE_KEYS.MODEL, modelVal);
+            localStorage.setItem(STORAGE_KEYS.IMAGE_MODEL, imgModelVal);
+
+            const currentKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
+            if (currentKey) {
+                updateSnakeUI("discovery", "模型配置已保存！贪吃蛇尼克和布谷老师都准备好啦！");
+            } else {
+                alert("请输入有效的 API Key (sk-...)！");
+            }
+        }
+
+        // ==================== 3. 家长后台设置弹窗 ====================
+        function openParentModal() {
+            document.getElementById("parentAgeInput").value = learnerProfile.age || 9;
+            document.getElementById("parentGradeInput").value = learnerProfile.grade || "小学三年级";
+            document.getElementById("progMathInput").value = learnerProfile.subjectProgress["数学"] || "";
+            document.getElementById("progChineseInput").value = learnerProfile.subjectProgress["语文"] || "";
+            document.getElementById("progEnglishInput").value = learnerProfile.subjectProgress["英语"] || "";
+            document.getElementById("progScienceInput").value = learnerProfile.subjectProgress["科学"] || "";
+            document.getElementById("parentLevelDisplay").innerText = learnerProfile.adaptiveLevel || 1;
+            document.getElementById("parentModal").classList.remove("hidden");
+        }
+
+        function closeParentModal() {
+            document.getElementById("parentModal").classList.add("hidden");
+        }
+
+        function resetAdaptiveLevel() {
+            learnerProfile.adaptiveLevel = 1;
+            document.getElementById("parentLevelDisplay").innerText = "1";
+            saveAllStates();
+            syncStatusUI();
+        }
+
+        function saveParentSettings() {
+            const ageVal = parseInt(document.getElementById("parentAgeInput").value, 10) || 9;
+            const gradeVal = document.getElementById("parentGradeInput").value;
+            learnerProfile.age = ageVal;
+            learnerProfile.grade = gradeVal;
+            learnerProfile.subjectProgress["数学"] = document.getElementById("progMathInput").value.trim() || "基础运算与生活应用";
+            learnerProfile.subjectProgress["语文"] = document.getElementById("progChineseInput").value.trim() || "课文阅读与写话表达";
+            learnerProfile.subjectProgress["英语"] = document.getElementById("progEnglishInput").value.trim() || "日常交际与基础词汇";
+            learnerProfile.subjectProgress["科学"] = document.getElementById("progScienceInput").value.trim() || "自然观察与生活科学现象";
+
+            saveAllStates();
+            syncStatusUI();
+            closeParentModal();
+            updateSnakeUI("discovery", `进度档案已更新！布谷老师现在会按照【${gradeVal}（${ageVal}岁）】的课本进度来设计探险啦！`);
+        }
+
+        // ==================== 4. 贪吃蛇尼克：弯曲路径 + 4科果实 + 实时移动伸长动画 ====================
+        const snakeCanvas = document.getElementById("snakeCanvas");
+        const sCtx = snakeCanvas.getContext("2d");
+        const RAINBOW_PALETTE = [
+            "#FF6B6B", "#FF9F43", "#FECA57", "#1DD1A1", "#48DBFB", "#54A0FF", "#A29BFE"
+        ];
+
+        let animClock = 0;
+        let blinkTimer = 0;
+        let isBlinking = false;
+
+        function sampleCurvedPath(t) {
+            const startY = 26;
+            const endY = 256;
+            const y = startY + t * (endY - startY);
+            const x = 130 + Math.sin(t * Math.PI * 2.5) * 76;
+            return { x, y };
+        }
+
+        function renderSnakeCanvas() {
+            sCtx.clearRect(0, 0, snakeCanvas.width, snakeCanvas.height);
+            animClock += 0.035;
+
+            const diffT = snakeState.targetHeadT - snakeState.currentHeadT;
+            if (Math.abs(diffT) > 0.0008) {
+                snakeState.currentHeadT += diffT * 0.06;
+            } else {
+                snakeState.currentHeadT = snakeState.targetHeadT;
+            }
+
+            blinkTimer += 1;
+            if (blinkTimer > 160) {
+                isBlinking = true;
+                if (blinkTimer > 172) {
+                    isBlinking = false;
+                    blinkTimer = 0;
+                }
+            }
+
+            if (snakeState.growAnimProgress > 0) {
+                snakeState.growAnimProgress = Math.max(0, snakeState.growAnimProgress - 0.018);
+            }
+            if (snakeState.collectAnimTimer > 0) {
+                snakeState.collectAnimTimer = Math.max(0, snakeState.collectAnimTimer - 1);
+            }
+
+            sCtx.save();
+            sCtx.beginPath();
+            sCtx.strokeStyle = "rgba(16, 185, 129, 0.14)";
+            sCtx.lineWidth = 16;
+            sCtx.lineCap = "round";
+            for (let step = 0; step <= 60; step++) {
+                const pt = sampleCurvedPath(step / 60);
+                if (step === 0) sCtx.moveTo(pt.x, pt.y);
+                else sCtx.lineTo(pt.x, pt.y);
+            }
+            sCtx.stroke();
+
+            sCtx.beginPath();
+            sCtx.setLineDash([4, 6]);
+            sCtx.strokeStyle = "rgba(5, 150, 105, 0.28)";
+            sCtx.lineWidth = 2;
+            for (let step = 0; step <= 60; step++) {
+                const pt = sampleCurvedPath(step / 60);
+                if (step === 0) sCtx.moveTo(pt.x, pt.y);
+                else sCtx.lineTo(pt.x, pt.y);
+            }
+            sCtx.stroke();
+            sCtx.restore();
+
+            SUBJECT_NODES.forEach((node, idx) => {
+                const fPt = sampleCurvedPath(node.t);
+                const isEaten = dailyState.completedSubjects.includes(node.name);
+                const isActiveSub = dailyState.currentSubject === node.name && !isEaten;
+
+                if (isEaten) {
+                    sCtx.beginPath();
+                    sCtx.fillStyle = "rgba(16, 185, 129, 0.25)";
+                    sCtx.arc(fPt.x, fPt.y, 7, 0, Math.PI * 2);
+                    sCtx.fill();
+
+                    sCtx.fillStyle = "#059669";
+                    sCtx.font = "bold 9px sans-serif";
+                    sCtx.textAlign = "center";
+                    sCtx.fillText(`✓${node.name}`, fPt.x, fPt.y + 16);
+                } else {
+                    const pulse = Math.sin(animClock * 3 + idx) * (isActiveSub ? 3.5 : 2);
+                    sCtx.beginPath();
+                    sCtx.fillStyle = isActiveSub ? "rgba(251, 191, 36, 0.38)" : "rgba(255, 255, 255, 0.65)";
+                    sCtx.arc(fPt.x, fPt.y, 13 + pulse, 0, Math.PI * 2);
+                    sCtx.fill();
+
+                    sCtx.beginPath();
+                    sCtx.fillStyle = node.color;
+                    sCtx.arc(fPt.x, fPt.y, 8.5, 0, Math.PI * 2);
+                    sCtx.fill();
+                    sCtx.strokeStyle = "#FFFFFF";
+                    sCtx.lineWidth = 1.6;
+                    sCtx.stroke();
+
+                    sCtx.beginPath();
+                    sCtx.fillStyle = "#10B981";
+                    sCtx.ellipse(fPt.x + 3, fPt.y - 9, 4.2, 2.2, -0.4, 0, Math.PI * 2);
+                    sCtx.fill();
+
+                    sCtx.fillStyle = "#334155";
+                    sCtx.font = "bold 10px sans-serif";
+                    sCtx.textAlign = "center";
+                    sCtx.fillText(node.name, fPt.x, fPt.y + 19);
+                }
+            });
+
+            const headT = snakeState.currentHeadT;
+            if (snakeState.collectAnimTimer > 0) {
+                const headPt = sampleCurvedPath(headT);
+                const radius = (65 - snakeState.collectAnimTimer) * 0.65;
+                sCtx.beginPath();
+                sCtx.strokeStyle = `rgba(245, 158, 11, ${snakeState.collectAnimTimer / 65})`;
+                sCtx.lineWidth = 3;
+                sCtx.arc(headPt.x, headPt.y, radius, 0, Math.PI * 2);
+                sCtx.stroke();
+
+                if (snakeState.lastEatLabel) {
+                    sCtx.fillStyle = `rgba(5, 150, 105, ${Math.min(1, snakeState.collectAnimTimer / 30)})`;
+                    sCtx.font = "bold 11px sans-serif";
+                    sCtx.textAlign = "center";
+                    sCtx.fillText(snakeState.lastEatLabel, headPt.x, headPt.y - 18 - (65 - snakeState.collectAnimTimer) * 0.25);
+                }
+            }
+
+            const effectiveSegments = snakeState.segments - snakeState.growAnimProgress;
+            const visibleNodes = Math.min(22, Math.max(5, Math.round(effectiveSegments) + 2));
+            const spanT = Math.min(Math.max(0.11, headT - 0.02), visibleNodes * 0.028);
+            const bodyPoints = [];
+
+            for (let i = 0; i <= visibleNodes; i++) {
+                const ratio = i / visibleNodes;
+                const t = headT - spanT * (1 - ratio);
+                const basePt = sampleCurvedPath(Math.max(0.02, t));
+                const sway = Math.sin(animClock * 2.2 - ratio * 5) * (1.8 * (1 - ratio * 0.5));
+                bodyPoints.push({
+                    x: basePt.x + sway,
+                    y: basePt.y,
+                    ratio: ratio
+                });
+            }
+
+            for (let i = 0; i < bodyPoints.length - 1; i++) {
+                const p1 = bodyPoints[i];
+                const p2 = bodyPoints[i + 1];
+                const width = 5 + Math.sin(p1.ratio * Math.PI * 0.75) * 12;
+                const colorIndex = Math.floor(i * 0.7) % RAINBOW_PALETTE.length;
+
+                sCtx.beginPath();
+                sCtx.strokeStyle = RAINBOW_PALETTE[colorIndex];
+                sCtx.lineWidth = width;
+                sCtx.lineCap = "round";
+                sCtx.lineJoin = "round";
+                sCtx.moveTo(p1.x, p1.y);
+                sCtx.lineTo(p2.x, p2.y);
+                sCtx.stroke();
+
+                sCtx.beginPath();
+                sCtx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+                sCtx.lineWidth = width * 0.35;
+                sCtx.lineCap = "round";
+                sCtx.moveTo(p1.x - 1.5, p1.y - 1.5);
+                sCtx.lineTo(p2.x - 1.5, p2.y - 1.5);
+                sCtx.stroke();
+            }
+
+            const headPt = bodyPoints[bodyPoints.length - 1];
+            const neckPt = bodyPoints[bodyPoints.length - 2] || { x: headPt.x, y: headPt.y - 8 };
+            const angle = Math.atan2(headPt.y - neckPt.y, headPt.x - neckPt.x);
+
+            sCtx.save();
+            sCtx.translate(headPt.x, headPt.y);
+            sCtx.rotate(angle);
+
+            if (snakeState.mood === "growing" || snakeState.mood === "exploring" || Math.sin(animClock * 1.5) > 0.65) {
+                const tLen = 6 + Math.sin(animClock * 8) * 2.5;
+                sCtx.beginPath();
+                sCtx.strokeStyle = "#FB7185";
+                sCtx.lineWidth = 2;
+                sCtx.lineCap = "round";
+                sCtx.moveTo(13, 0);
+                sCtx.lineTo(13 + tLen, 0);
+                sCtx.lineTo(13 + tLen + 2.5, -2.5);
+                sCtx.moveTo(13 + tLen, 0);
+                sCtx.lineTo(13 + tLen + 2.5, 2.5);
+                sCtx.stroke();
+            }
+
+            sCtx.beginPath();
+            sCtx.fillStyle = "#10B981";
+            sCtx.strokeStyle = "#047857";
+            sCtx.lineWidth = 2;
+            sCtx.moveTo(15, 0);
+            sCtx.quadraticCurveTo(9, -12.5, -8, -10.5);
+            sCtx.quadraticCurveTo(-12, 0, -8, 10.5);
+            sCtx.quadraticCurveTo(9, 12.5, 15, 0);
+            sCtx.fill();
+            sCtx.stroke();
+
+            if (dailyState.completedSubjects.length >= 4 || snakeState.mood === "exploring") {
+                sCtx.fillStyle = "#FBBF24";
+                sCtx.beginPath();
+                sCtx.moveTo(-4, -9);
+                sCtx.lineTo(-8, -15);
+                sCtx.lineTo(-2, -13);
+                sCtx.lineTo(1, -16);
+                sCtx.lineTo(3, -10);
+                sCtx.closePath();
+                sCtx.fill();
+            }
+
+            if (isBlinking) {
+                sCtx.strokeStyle = "#064E3B";
+                sCtx.lineWidth = 2;
+                sCtx.beginPath(); sCtx.moveTo(1, -6); sCtx.lineTo(5, -4.5); sCtx.stroke();
+                sCtx.beginPath(); sCtx.moveTo(1, 6); sCtx.lineTo(5, 4.5); sCtx.stroke();
+            } else if (snakeState.mood === "growing" || snakeState.mood === "discovery") {
+                sCtx.strokeStyle = "#FFFFFF";
+                sCtx.lineWidth = 2.2;
+                sCtx.beginPath(); sCtx.arc(2.5, -5, 3.2, Math.PI * 0.8, Math.PI * 1.9); sCtx.stroke();
+                sCtx.beginPath(); sCtx.arc(2.5, 5, 3.2, Math.PI * 0.1, Math.PI * 1.2); sCtx.stroke();
+            } else {
+                sCtx.fillStyle = "#FFFFFF";
+                sCtx.beginPath(); sCtx.arc(2.5, -5, 3.6, 0, Math.PI * 2); sCtx.fill();
+                sCtx.beginPath(); sCtx.arc(2.5, 5, 3.6, 0, Math.PI * 2); sCtx.fill();
+
+                sCtx.fillStyle = "#1E293B";
+                sCtx.beginPath(); sCtx.arc(3.6, -5, 1.9, 0, Math.PI * 2); sCtx.fill();
+                sCtx.beginPath(); sCtx.arc(3.6, 5, 1.9, 0, Math.PI * 2); sCtx.fill();
+
+                sCtx.fillStyle = "#FFFFFF";
+                sCtx.beginPath(); sCtx.arc(4.2, -5.6, 0.7, 0, Math.PI * 2); sCtx.fill();
+                sCtx.beginPath(); sCtx.arc(4.2, 4.4, 0.7, 0, Math.PI * 2); sCtx.fill();
+            }
+
+            sCtx.fillStyle = "rgba(251, 113, 133, 0.55)";
+            sCtx.beginPath(); sCtx.arc(-1.5, -7.5, 2.2, 0, Math.PI * 2); sCtx.fill();
+            sCtx.beginPath(); sCtx.arc(-1.5, 7.5, 2.2, 0, Math.PI * 2); sCtx.fill();
+
+            sCtx.restore();
+
+            requestAnimationFrame(renderSnakeCanvas);
+        }
+        renderSnakeCanvas();
+
+        function updateSnakeUI(mood, bubbleText) {
+            if (mood) snakeState.mood = mood;
+            if (bubbleText) document.getElementById("snakeBubble").innerText = bubbleText;
+
+            const moodMap = {
+                companion: "状态：等待出发",
+                growing: "状态：能量满满 ✨",
+                discovery: "状态：认真探索 🔍",
+                exploring: "状态：兴趣冒险 🗺️"
+            };
+            document.getElementById("snakeMoodLabel").innerText = moodMap[snakeState.mood] || "状态：温暖陪伴";
+            document.getElementById("fruitCount").innerText = dailyState.completedSubjects.length;
+            document.getElementById("snakeSegmentsText").innerText = snakeState.segments;
+        }
+
+        function snakeInteract() {
+            const eatenCount = dailyState.completedSubjects.length;
+            const remaining = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
+            const lines = [
+                eatenCount < 4
+                    ? `“我是贪吃蛇尼克！还差【${remaining.join("、")}】${4 - eatenCount}颗果实，我就集齐今天的全部能量啦！”`
+                    : "“哇！4颗学科果实全都被我吃掉啦！今日成长卡和兴趣世界都已经为你解锁咯！”",
+                "“和布谷老师聊天时，直接点选项按钮，或者用 iPad 键盘/语音告诉我你的想法，超方便的！”",
+                "“点一点左下角的 📷 相机，把你画的画或者课本上的小发现拍给我和布谷老师看看吧！”"
+            ];
+            updateSnakeUI(snakeState.mood, lines[Math.floor(Math.random() * lines.length)]);
+        }
+
+        // ==================== 5. 每日闭环与双模式状态同步 ====================
+        function enforceModeVisibility() {
+            const baseBar = document.getElementById("baseSubjectBar");
+            const intTopBar = document.getElementById("interestTopBar");
+            const intPanel = document.getElementById("interestWorldPanel");
+            const workbench = document.getElementById("mainWorkbench");
+            const lockBanner = document.getElementById("interestLockBanner");
+            const allFourDone = normalizeCompletedSubjects(dailyState.completedSubjects).length >= 4;
+
+            if (currentMode === "interest") {
+                baseBar.classList.add("hidden");
+                intTopBar.classList.remove("hidden");
+                intTopBar.classList.add("flex");
+                intPanel.classList.remove("hidden");
+                workbench.classList.add("ring-2", "ring-purple-200");
+
+                const cfg = WORLD_ATMOSPHERES[storyState.worldSetting];
+                const banner = document.getElementById("interestAtmosphereBanner");
+                if (cfg) {
+                    intPanel.className = `px-4 py-3 border-b ${cfg.panelClass}`;
+                    banner.className = `text-[11px] font-bold ${cfg.accentText}`;
+                    banner.innerText = cfg.banner;
+                } else {
+                    intPanel.className = "bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 px-4 py-3 border-b border-purple-100";
+                    banner.className = "text-[11px] font-bold text-purple-900";
+                    banner.innerText = "✨ 兴趣世界说明：集齐4科能量果实后解锁！在这里布谷老师会结合你学过的知识，带你向更深、更有挑战的拓展领域探险，也可以自由提问和编故事。";
+                }
+
+                if (!allFourDone) {
+                    lockBanner.classList.remove("hidden");
+                } else {
+                    lockBanner.classList.add("hidden");
+                }
+            } else {
+                currentMode = "base";
+                baseBar.classList.remove("hidden");
+                intTopBar.classList.add("hidden");
+                intTopBar.classList.remove("flex");
+                intPanel.classList.add("hidden");
+                lockBanner.classList.add("hidden");
+                workbench.classList.remove("ring-2", "ring-purple-200");
+            }
+        }
+
+        function syncStatusUI() {
+            dailyState.completedSubjects = normalizeCompletedSubjects(dailyState.completedSubjects);
+            const badge = document.getElementById("dailyStatusBadge");
+            const subtitle = document.getElementById("headerSubtitle");
+            const topicDisplay = document.getElementById("todayTopicDisplay");
+            const lockIcon = document.getElementById("interestLockIcon");
+            const confirmBar = document.getElementById("dailyConfirmBar");
+            const interestNodeBar = document.getElementById("interestNodeBar");
+            const growthCardBtn = document.getElementById("growthCardBtn");
+            const growthCardIcon = document.getElementById("growthCardIcon");
+
+            const eatenCount = dailyState.completedSubjects.length;
+            const allFourDone = eatenCount >= 4;
+            if (allFourDone) dailyState.growthCardUnlocked = true;
+
+            subtitle.innerText = `${learnerProfile.grade}（${learnerProfile.age}岁）· 难度阶梯 Lv.${learnerProfile.adaptiveLevel} · 布谷老师与贪吃蛇尼克`;
+            topicDisplay.innerText = dailyState.currentSubject
+                ? `${dailyState.currentSubject}探索中（${dailyState.subjectTurns[dailyState.currentSubject] || 0}轮）`
+                : (allFourDone ? "四科全部完成 🎉" : "点击上方学科开始");
+
+            if (allFourDone) {
+                badge.innerText = "今日学科果实：4/4 已集齐 🎉";
+                badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+            } else {
+                badge.innerText = `今日学科果实：${eatenCount}/4`;
+                badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800";
+            }
+
+            ["数学", "语文", "英语", "科学"].forEach(sub => {
+                const bEl = document.getElementById(`badge-${sub}`);
+                const done = dailyState.completedSubjects.includes(sub);
+                if (bEl) {
+                    if (done) {
+                        bEl.className = "py-1 px-1 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 transition";
+                        bEl.innerText = `✓ ${sub}`;
+                    } else if (dailyState.currentSubject === sub) {
+                        bEl.className = "py-1 px-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 transition";
+                        bEl.innerText = `● ${sub}`;
+                    } else {
+                        const iconMap = { "数学": "📐", "语文": "📖", "英语": "🔤", "科学": "🔬" };
+                        bEl.className = "py-1 px-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 transition";
+                        bEl.innerText = `${iconMap[sub]} ${sub}`;
+                    }
+                }
+            });
+
+            if (allFourDone || dailyState.growthCardUnlocked) {
+                growthCardBtn.className = "bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1 min-h-[36px] animate-pulse";
+                growthCardIcon.innerText = "💌";
+            } else {
+                growthCardBtn.className = "bg-gray-200 hover:bg-gray-300 text-gray-600 px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 min-h-[36px]";
+                growthCardIcon.innerText = "🔒";
+            }
+
+            lockIcon.innerText = allFourDone ? "🔓" : "🔒";
+
+            if (dailyState.status === "WAITING_CONFIRM" && currentMode === "base" && dailyState.currentSubject && !dailyState.completedSubjects.includes(dailyState.currentSubject)) {
+                document.getElementById("dailyConfirmText").innerText = `🌟 太棒了！你完成了【${dailyState.currentSubject}】的探索，要让贪吃蛇尼克吃掉这颗${dailyState.currentSubject}果实吗？`;
+                confirmBar.classList.remove("hidden");
+            } else {
+                confirmBar.classList.add("hidden");
+            }
+
+            if (storyState.waitingNodeChoice && currentMode === "interest" && allFourDone) {
+                document.getElementById("interestNodeText").innerText = `🧭 【${storyState.worldSetting || "兴趣世界"} · 第${storyState.depthStage}阶段】探索达成！由你决定接下来的节奏：`;
+                interestNodeBar.classList.remove("hidden");
+            } else {
+                interestNodeBar.classList.add("hidden");
+            }
+
+            document.getElementById("storyWorldName").innerText = storyState.worldSetting || "未选择";
+            document.getElementById("storySceneName").innerText = storyState.currentScene || "等待开启冒险";
+            document.getElementById("storyDepthLabel").innerText = `第 ${storyState.depthStage} 阶段（Lv.${learnerProfile.adaptiveLevel}）`;
+            document.getElementById("storyCluesCount").innerText = `已记录线索：${storyState.discoveredClues.length} 条`;
+
+            enforceModeVisibility();
+        }
+
+        function switchMode(mode) {
+            currentMode = mode === "interest" ? "interest" : "base";
+            const baseBtn = document.getElementById("tabBaseBtn");
+            const intBtn = document.getElementById("tabInterestBtn");
+
+            document.getElementById("quickChoiceBar").classList.add("hidden");
+            document.getElementById("quickChoiceBar").innerHTML = "";
+            document.getElementById("userInput").placeholder = currentMode === "base"
+                ? "直接点选项按钮，或用 iPad 键盘/语音输入..."
+                : "在兴趣世界里点选项按钮、用键盘/语音自由提问或编故事...";
+
+            if (currentMode === "base") {
+                baseBtn.className = "tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]";
+                intBtn.className = "text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]";
+                updateSnakeUI(dailyState.completedSubjects.length > 0 ? "growing" : "companion");
+            } else {
+                intBtn.className = "tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]";
+                baseBtn.className = "text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]";
+
+                if (dailyState.completedSubjects.length >= 4) {
+                    updateSnakeUI("exploring", "欢迎来到兴趣世界！布谷老师会结合你学过的知识，带你向更深、更有挑战的领域探险，也能随时自由交流！");
+                } else {
+                    updateSnakeUI("discovery", `先集齐路径上的 4 颗学科果实（目前 ${dailyState.completedSubjects.length}/4），就能解锁完整兴趣世界哦！`);
+                }
+            }
+
+            syncStatusUI();
+            renderChatFromHistory();
+            saveAllStates();
+        }
+
+        function startNewDay() {
+            if (!confirm("确定要开启新的一天吗？这将重置今日的4科果实进度与今日对话，贪吃蛇尼克会回到起点重新出发（家长后台设定和已累积的探索记忆会保留）。")) return;
+            dailyState = {
+                date: getTodayStr(),
+                status: "NOT_STARTED",
+                currentSubject: "",
+                subjectTurns: { "数学": 0, "语文": 0, "英语": 0, "科学": 0 },
+                completedSubjects: [],
+                growthCardUnlocked: false
+            };
+            snakeState.segments = 4;
+            snakeState.currentHeadT = 0.16;
+            snakeState.targetHeadT = 0.16;
+            snakeState.growAnimProgress = 0;
+            snakeState.collectAnimTimer = 0;
+            baseChatHistory = [];
+            currentMode = "base";
+            updateSnakeUI("companion", "早安呀！新的一天开始啦，贪吃蛇尼克已经站在起点，准备吃掉数学、语文、英语、科学4颗能量果实咯！");
+            saveAllStates();
+            switchMode("base");
+            initBaseWelcome();
+        }
+
+        // 确认完成当前学科并让尼克移动、变长、吃掉对应果实（严格防重复领取）
+        function confirmEatSubjectFruit() {
+            if (isEatingFruitLock) return;
+            const sub = dailyState.currentSubject;
+            if (!sub || !["数学", "语文", "英语", "科学"].includes(sub)) return;
+
+            isEatingFruitLock = true;
+            const confirmBtn = document.getElementById("eatFruitConfirmBtn");
+            if (confirmBtn) confirmBtn.disabled = true;
+
+            try {
+                if (!dailyState.completedSubjects.includes(sub)) {
+                    dailyState.completedSubjects.push(sub);
+                    snakeState.segments += 2;
+                    snakeState.totalFruitsEaten += 1;
+                    snakeState.targetHeadT = computeTargetHeadT();
+                    snakeState.growAnimProgress = 1.0;
+                    snakeState.collectAnimTimer = 65;
+                    snakeState.lastEatLabel = `吃掉${sub}果实! +2节`;
+                    learnerProfile.adaptiveLevel = Math.min(10, (learnerProfile.adaptiveLevel || 1) + 1);
+                }
+
+                const eatenCount = dailyState.completedSubjects.length;
+                const remaining = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
+
+                if (eatenCount >= 4) {
+                    dailyState.status = "COMPLETED";
+                    dailyState.growthCardUnlocked = true;
+                    dailyState.currentSubject = "";
+                    updateSnakeUI("growing", "🎉 太厉害啦！4颗学科果实全部被尼克吃掉啦！今日成长卡已解锁，兴趣世界也向你敞开大门咯！");
+
+                    const finishAllMsg = `🎉 恭喜你！贪吃蛇尼克已经沿着小径吃掉了【数学、语文、英语、科学】全部 4 颗能量果实，身体变得又长又亮！\n\n现在你可以点击下方按钮继续：`;
+                    baseChatHistory.push({
+                        role: "assistant",
+                        content: finishAllMsg,
+                        choices: ["✨ 前往兴趣世界探险", "💌 生成今日成长卡"]
+                    });
+                } else {
+                    dailyState.status = "IN_PROGRESS";
+                    const nextSub = remaining[0];
+                    updateSnakeUI("growing", `啊呜！尼克吃掉了【${sub}果实】，向前爬行并长高了两节！还剩 ${remaining.length} 颗果实（${remaining.join("、")}），我们去点亮【${nextSub}】吧！`);
+
+                    const nextSubMsg = `🍎 咔嚓！贪吃蛇尼克开心得摇起了尾巴，顺利吃掉了【${sub}能量果实】，身体变长了 2 节！\n\n目前进度：**${eatenCount} / 4 颗果实**（还差：${remaining.join("、")}）。\n直接点下方按钮就可以开始下一门探索啦：`;
+                    baseChatHistory.push({
+                        role: "assistant",
+                        content: nextSubMsg,
+                        choices: remaining.map(s => `🚀 进入【${s}】收集果实`)
+                    });
+                    dailyState.currentSubject = "";
+                }
+
+                saveAllStates();
+                syncStatusUI();
+                renderChatFromHistory();
+            } finally {
+                isEatingFruitLock = false;
+                if (confirmBtn) confirmBtn.disabled = false;
+            }
+        }
+
+        function continueDailyExploration() {
+            if (!dailyState.currentSubject) return;
+            dailyState.status = "IN_PROGRESS";
+            learnerProfile.adaptiveLevel = Math.min(10, (learnerProfile.adaptiveLevel || 1) + 1);
+            saveAllStates();
+            syncStatusUI();
+            sendMessage(`请出一道难度升级的【${dailyState.currentSubject}】选择题，给出完整题干和 3 个答案选项。`);
+        }
+
+        // ==================== 6. System Prompt 构建器 ====================
+        function buildSystemPrompt() {
+            const profileInfo = `【家长后台设定的孩子档案】
+- 孩子年龄：${learnerProfile.age}岁，年级：${learnerProfile.grade}
+- 当前自适应能力阶梯：Lv.${learnerProfile.adaptiveLevel}（随表现逐步提升）
+- 各学科当前课本进度：
+  * 数学：${learnerProfile.subjectProgress["数学"]}
+  * 语文：${learnerProfile.subjectProgress["语文"]}
+  * 英语：${learnerProfile.subjectProgress["英语"]}
+  * 科学：${learnerProfile.subjectProgress["科学"]}`;
+
+            const choiceFormatRule = `
+【iPad 触控与语音优先交互铁律（极其重要，每轮回复必须严格遵守！）】
+孩子习惯在 iPad 上直接触控点选答案按钮，或使用键盘/语音回复：
+1. 每次回复必须简短清晰、口语化（100~170字以内），重点口诀或关键句可以用 **加粗** 突出，一次只推进一步或一道小题。
+2. 禁止只提开放式问答题而不给候选答案！每道题或每个探索步骤都必须给出完整题干/情境，并且提供 **3 个具体、可独立作答的选项（A、B、C）**。
+3. 在正文中必须完整写出题目和 3 个选项（如 A. ... / B. ... / C. ...），同时在回复的最后一行严格附上英文方括号标签：
+   [CHOICES: A. 选项一 | B. 选项二 | C. 选项三]
+   - 选项必须紧扣当前题目或当前场景，严禁出现与当前题目无关的通用按钮。
+   - 每个选项控制在 4~18 个字以内，小朋友触碰按钮即可直接提交作答。`;
+
+            if (currentMode === "base") {
+                const sub = dailyState.currentSubject || "综合探索";
+                const subProgress = learnerProfile.subjectProgress[sub] || "当前年级基础进度";
+                const turns = dailyState.subjectTurns[sub] || 0;
+                const alreadyEaten = dailyState.completedSubjects.includes(sub);
+
+                return `你是“布谷老师”，一位亲切、温暖、充满好奇心、擅长启发思考的 AI 探索导师；你的搭档“贪吃蛇尼克”正陪着孩子沿着森林小径收集数学、语文、英语、科学 4 颗能量果实。
+
+${profileInfo}
+
+【当前任务与教学策略】
+1. 角色一致性：你始终是“布谷老师”，对话中可以自然提到“贪吃蛇尼克”，说话主体永远是布谷老师。
+2. 题型与选项规范：
+   - 当前探索学科：【${sub}】，对应课本进度：【${subProgress}】，当前能力阶梯：【Lv.${learnerProfile.adaptiveLevel}】。
+   - 数学、科学、英语、语文均采用带 3 个明确选项（A、B、C）的选择题（英语题也要给出完整英文问候/句子与 3 个具体选项）。
+   - 第 1 轮：结合课本进度给出生活情境、完整题干和 3 个选项。
+   - 第 2 轮及以后：先针对孩子上一轮的选择给出明确反馈与简短解释；若该学科尚未完成，继续给出下一道带 3 个选项的选择题。
+${choiceFormatRule}
+3. 学科完成标记：
+   - 当前【${sub}】已交互轮次：${turns}（本轮是否已吃过果实：${alreadyEaten ? "是" : "否"}）。
+   - 仅当孩子已完成至少 2 轮有效作答且本轮已给出针对性反馈时，才可在最后一行附上：[SUBJECT_DONE]。`;
+            } else {
+                const learnedSummary = dailyState.completedSubjects.length > 0
+                    ? `今天刚刚完成了：${dailyState.completedSubjects.join("、")}的探索。`
+                    : "正准备开启拓展探索。";
+                const storySummary = `世界设定：${storyState.worldSetting || "奇幻探索世界"}；当前场景：${storyState.currentScene || "冒险起点"}；当前探索深度：第 ${storyState.depthStage} 阶段（能力阶梯 Lv.${learnerProfile.adaptiveLevel}）；已发现线索：${storyState.discoveredClues.join("、") || "暂无"}。`;
+
+                return `你是“布谷老师”，正在【兴趣世界】里以冒险伙伴与向导的身份，带着贪吃蛇尼克和孩子一起探索【${storyState.worldSetting || "奇幻探索世界"}】。
+
+${profileInfo}
+${learnedSummary}
+
+【兴趣世界核心规则】
+1. 角色与氛围：更像冒险中的故事伙伴，根据【${storyState.worldSetting || "奇幻探索世界"}】营造画面感，允许孩子自由提问、编故事或表达想法，在合适时机自然融入【${learnerProfile.grade}】课本知识延伸。
+2. 探索行动选项：在正文中清晰说明当前情境与 3 个行动选项，并在最后一行严格附上 [CHOICES: A. ... | B. ... | C. ...]。
+${choiceFormatRule}
+3. 阶段节点提示：
+   - 当前处于第 ${storyState.depthStage} 阶段，本阶段已交流 ${storyState.stageTurns} 轮。
+   - 每当完成一个小探险节拍（本阶段交流至少 2 轮后），可在末尾附上：[STAGE_CHECKPOINT]。
+
+【当前故事记忆档案】
+${storySummary}
+
+【状态同步标记（按需附带在末尾，系统会自动隐藏）】
+- 若场景变化：[SCENE: 新场景名称]
+- 若发现新线索：[CLUE: 线索简短描述]`;
+            }
+        }
+
+        // ==================== 7. 初始化与快捷交互入口 ====================
+        function initBaseWelcome() {
+            if (baseChatHistory.length === 0) {
+                const welcomeMsg = `你好呀！我是布谷老师，旁边这位扭来扭去的小家伙是贪吃蛇尼克 🐍\n\n森林小径上有 **数学、语文、英语、科学** 4 颗能量果实！我已经记下了你【${learnerProfile.grade}】的课本进度，每完成一门探索，尼克就会向前爬行并长高一节。\n\n直接点下方按钮就可以开始今天的第一颗果实啦！`;
+                baseChatHistory.push({
+                    role: "assistant",
+                    content: welcomeMsg,
+                    choices: ["📐 挑战数学果实", "📖 挑战语文果实", "🔤 挑战英语果实", "🔬 挑战科学果实"]
+                });
+                saveAllStates();
+            }
+            currentMode = "base";
+            syncStatusUI();
+            renderChatFromHistory();
+        }
+
+        function startSubjectExplore(subject) {
+            if (isSendingRequest) return;
+            if (currentMode !== "base") switchMode("base");
+            dailyState.currentSubject = subject;
+            if (dailyState.status === "NOT_STARTED" || dailyState.status === "WAITING_CONFIRM") {
+                dailyState.status = "IN_PROGRESS";
+            }
+            const prog = learnerProfile.subjectProgress[subject] || "本学期基础内容";
+            const isAlreadyDone = dailyState.completedSubjects.includes(subject);
+
+            saveAllStates();
+            syncStatusUI();
+            updateSnakeUI("discovery", `布谷老师正在为你和尼克准备【${subject}】探索情境（课本进度：${prog}）...`);
+
+            const promptText = isAlreadyDone
+                ? `请结合【${prog}】出一道【${subject}】升级加练选择题，必须包含完整题干和 3 个选项（A、B、C），并在最后一行输出 [CHOICES: A. ... | B. ... | C. ...]。`
+                : `请结合【${prog}】为我开启第一个【${subject}】生活探索情境与选择题，必须包含完整题干和 3 个选项（A、B、C），并在最后一行输出 [CHOICES: A. ... | B. ... | C. ...]。`;
+            sendMessage(promptText);
+        }
+
+        function toggleInterestWorldDrawer() {
+            if (currentMode !== "interest") return;
+            const panel = document.getElementById("interestWorldPanel");
+            panel.classList.toggle("hidden");
+        }
+
+        function selectInterestWorld(worldName) {
+            if (isSendingRequest) return;
+            if (currentMode !== "interest") switchMode("interest");
+            storyState.worldSetting = worldName;
+            storyState.currentScene = `${worldName}·第一探索区`;
+            storyState.depthStage = 1;
+            storyState.stageTurns = 0;
+            storyState.waitingNodeChoice = false;
+            if (!learnerProfile.exploredInterests.includes(worldName)) {
+                learnerProfile.exploredInterests.push(worldName);
+            }
+            saveAllStates();
+            syncStatusUI();
+
+            if (dailyState.completedSubjects.length < 4) {
+                const rem = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
+                const previewMsg = `你选择了【${worldName}】！✨\n\n这里是布谷老师为你准备的兴趣探险区。目前贪吃蛇尼克还需要吃掉【${rem.join("、")}】这 ${rem.length} 颗学科果实才能解锁完整自由探险哦！`;
+                interestChatHistory.push({
+                    role: "assistant",
+                    content: previewMsg,
+                    choices: rem.map(s => `🍎 去收集【${s}】果实`)
+                });
+                saveAllStates();
+                renderChatFromHistory();
+                return;
+            }
+
+            sendMessage(`请带我进入【${worldName}】第 1 阶段探险，给出当前场景说明和 3 个可点选的行动选项（A、B、C），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
+        }
+
+        function continueInterestDeepExplore() {
+            if (isSendingRequest) return;
+            storyState.waitingNodeChoice = false;
+            storyState.depthStage += 1;
+            storyState.stageTurns = 0;
+            learnerProfile.adaptiveLevel = Math.min(10, (learnerProfile.adaptiveLevel || 1) + 1);
+            saveAllStates();
+            syncStatusUI();
+            sendMessage(`请带我进入【${storyState.worldSetting || "兴趣世界"}】的第 ${storyState.depthStage} 阶段，提升挑战难度并给出 3 个可点选的行动选项（A、B、C），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
+        }
+
+        function finishInterestSession() {
+            if (isSendingRequest) return;
+            storyState.waitingNodeChoice = false;
+            saveAllStates();
+            syncStatusUI();
+            sendMessage(`我决定在【${storyState.worldSetting || "兴趣世界"}】的第 ${storyState.depthStage} 阶段这里先圆满结束本次探险啦！请布谷老师帮我总结一下今天在兴趣世界里探索到的新发现。`, true);
+        }
+
+        function requestGrowthCard() {
+            if (isSendingRequest) return;
+            const eatenCount = dailyState.completedSubjects.length;
+            if (eatenCount < 4 && !dailyState.growthCardUnlocked) {
+                const rem = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
+                alert(`🔒 今日成长卡尚未解锁哦！\n\n贪吃蛇尼克目前吃掉了 ${eatenCount}/4 颗果实，还需要完成【${rem.join("、")}】的探索，集齐全部 4 颗能量果实就能解锁今日成长卡啦！`);
+                return;
+            }
+
+            const promptText = `我已经集齐了今日【数学、语文、英语、科学】全部 4 颗能量果实！请布谷老师结合我今天真实的探索对话记录，为我生成一份温暖又有仪式感的【今日成长卡】：
+1. 🏆 今日四科能量果实解锁记录
+2. 🌟 今天最值得肯定的思考优点
+3. 🌱 下一步可以继续升级探索的小方向
+4. 💌 布谷老师和贪吃蛇尼克送给我的专属寄语`;
+            sendMessage(promptText, true);
+        }
+
+        // ==================== 8. 图片上传（视觉理解）与图片生成 ====================
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith("image/")) {
+                alert("请选择图片文件哦！");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const maxDim = 1024;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                        else { w = Math.round(w * maxDim / h); h = maxDim; }
+                    }
+                    const offCanvas = document.createElement("canvas");
+                    offCanvas.width = w;
+                    offCanvas.height = h;
+                    offCanvas.getContext("2d").drawImage(img, 0, 0, w, h);
+                    pendingImageBase64 = offCanvas.toDataURL("image/jpeg", 0.82);
+
+                    document.getElementById("pendingImageThumb").src = pendingImageBase64;
+                    document.getElementById("imagePreviewBar").classList.remove("hidden");
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = "";
+        }
+
+        function clearPendingImage() {
+            pendingImageBase64 = null;
+            document.getElementById("imagePreviewBar").classList.add("hidden");
+            document.getElementById("pendingImageThumb").src = "";
+        }
+
+        async function requestStoryIllustration() {
+            const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
+            const baseUrl = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
+            const imgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || document.getElementById("imageModelInput").value.trim();
+
+            if (!apiKey) {
+                alert("请先在右上角“模型设置”中填写并保存 API Key！");
+                return;
+            }
+
+            if (!imgModel) {
+                const notice = "⚠️ 提示：当前尚未配置专门的图像生成模型。普通纯文本对话模型无法直接生成图片。\n\n如需开启故事插图生成，请点击右上角【⚙️ 模型设置】，在“生图模型”框中填入支持 `/images/generations` 接口的图像模型 ID（例如 `dall-e-3`）并保存后再试。";
+                appendMessageBubble(notice, "model");
+                return;
+            }
+
+            const sceneDesc = storyState.currentScene || storyState.worldSetting || "童话森林里的可爱小蛇尼克与小朋友一起探索奇妙世界";
+            const prompt = `Children's storybook watercolor illustration, warm, whimsical, safe for 9-year-old child, no text: ${sceneDesc}`;
+
+            const loadingId = "img-loading-" + Date.now();
+            appendMessageBubble(`🎨 布谷老师正在调用生图模型（${imgModel}）绘制场景插图，请稍候...`, "model", loadingId);
+
+            try {
+                const response = await fetch(`${baseUrl}/images/generations`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: imgModel,
+                        prompt: prompt,
+                        n: 1,
+                        size: "1024x1024"
+                    })
+                });
+
+                const data = await response.json();
+                const loadEl = document.getElementById(loadingId);
+                if (loadEl) loadEl.remove();
+
+                if (response.ok && data.data && data.data[0]) {
+                    const imgUrl = data.data[0].url || (data.data[0].b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : "");
+                    if (imgUrl) {
+                        const msgObj = {
+                            role: "assistant",
+                            content: `✨ 为你绘制了当前冒险场景插图【${sceneDesc}】：`,
+                            generatedImage: imgUrl
+                        };
+                        interestChatHistory.push(msgObj);
+                        saveAllStates();
+                        renderChatFromHistory();
+                        return;
+                    }
+                }
+
+                const errDetail = data.error?.message || `HTTP ${response.status}：当前模型或接口不支持图像生成`;
+                appendMessageBubble(`❌ 图像生成未成功：${errDetail}\n（提示：请检查该模型是否具备图像生成能力，或更换生图模型 ID。）`, "model");
+            } catch (err) {
+                const loadEl = document.getElementById(loadingId);
+                if (loadEl) loadEl.remove();
+                appendMessageBubble(`❌ 图像生成请求出错：${err.message}`, "model");
+            }
+        }
+
+        // ==================== 9. 语音输入与中文朗读 ====================
+        function toggleTTS() {
+            ttsEnabled = !ttsEnabled;
+            const btn = document.getElementById("ttsToggleBtn");
+            btn.innerText = ttsEnabled ? "🔊 布谷老师朗读：已开启" : "🔇 布谷老师朗读：已关闭";
+            if (!ttsEnabled && "speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        function speakText(text) {
+            if (!ttsEnabled || !("speechSynthesis" in window)) return;
+            window.speechSynthesis.cancel();
+            const cleanText = text
+                .replace(/\[.*?\]/g, "")
+                .replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}*#`>]/gu, "");
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = "zh-CN";
+            utterance.rate = 1.02;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        let recognition = null;
+        let isRecording = false;
+        if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = "zh-CN";
+            recognition.interimResults = true;
+            recognition.continuous = false;
+
+            recognition.onresult = (event) => {
+                let transcript = "";
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                const inputEl = document.getElementById("userInput");
+                inputEl.value = transcript;
+                document.getElementById("voiceStatusText").innerText = "✨ 识别完成！你可以在下方输入框修改文字，确认无误后点“发送”";
+            };
+
+            recognition.onerror = (event) => {
+                stopVoiceUI();
+                const statusBar = document.getElementById("voiceStatusBar");
+                const statusText = document.getElementById("voiceStatusText");
+                statusBar.classList.remove("hidden");
+                const reasonMap = {
+                    "not-allowed": "未获得麦克风权限，也可以直接点输入框再用 iPad 键盘自带麦克风听写。",
+                    "no-speech": "没有听到声音哦，可以靠近一点再试，或直接点输入框用 iPad 键盘听写/打字。",
+                    "network": "浏览器语音服务暂时不可用，请直接点输入框用 iPad 键盘自带麦克风听写。"
+                };
+                statusText.innerText = `⚠️ 语音提示：${reasonMap[event.error] || "请直接点输入框用 iPad 键盘听写或打字"}`;
+                setTimeout(() => statusBar.classList.add("hidden"), 4500);
+            };
+
+            recognition.onend = () => {
+                stopVoiceUI();
+                const inputVal = document.getElementById("userInput").value.trim();
+                if (inputVal) {
+                    document.getElementById("userInput").focus();
+                    setTimeout(() => document.getElementById("voiceStatusBar").classList.add("hidden"), 3500);
+                } else {
+                    document.getElementById("voiceStatusBar").classList.add("hidden");
+                }
+            };
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                alert("可以直接点下方输入框，再点 iPad 键盘上的麦克风图标（🎙️）说话听写哦！");
+                document.getElementById("userInput").focus();
+                return;
+            }
+            if (isRecording) {
+                stopVoiceRecognition();
+            } else {
+                isRecording = true;
+                const btn = document.getElementById("micBtn");
+                btn.classList.add("bg-rose-500", "text-white", "animate-pulse");
+                btn.innerText = "⏹️";
+                const statusBar = document.getElementById("voiceStatusBar");
+                document.getElementById("voiceStatusText").innerText = "🎙️ 正在聆听你的声音...（说完点“完成说话”，识别后可修改再发送）";
+                statusBar.classList.remove("hidden");
+                try {
+                    recognition.start();
+                } catch (e) {
+                    stopVoiceUI();
+                }
+            }
+        }
+
+        function stopVoiceRecognition() {
+            if (recognition && isRecording) {
+                try { recognition.stop(); } catch (e) {}
+            }
+            stopVoiceUI();
+        }
+
+        function stopVoiceUI() {
+            isRecording = false;
+            const btn = document.getElementById("micBtn");
+            btn.classList.remove("bg-rose-500", "text-white", "animate-pulse");
+            btn.innerText = "🎤";
+        }
+
+        // ==================== 10. 真实模型调用与上下文通信 ====================
+        function handleKeyPress(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function setSendingState(sending) {
+            isSendingRequest = sending;
+            const sendBtn = document.getElementById("sendBtn");
+            if (sendBtn) {
+                sendBtn.disabled = sending;
+                sendBtn.classList.toggle("opacity-60", sending);
+            }
+            document.querySelectorAll("#quickChoiceBar button").forEach(btn => {
+                btn.disabled = sending;
+                btn.classList.toggle("opacity-60", sending);
+                btn.classList.toggle("pointer-events-none", sending);
+            });
+        }
+
+        async function callChatCompletionWithFormatGuard(baseUrl, apiKey, modelName, apiMessages, sessionMode, isSummaryReq) {
+            const formatTail = isSummaryReq
+                ? ""
+                : "\n\n【输出格式硬性要求】你必须给出完整题干与 3 个具体候选答案（A、B、C），在正文中清晰写出题目和 3 个选项，并在最后一行严格输出：`[CHOICES: A. 选项一 | B. 选项二 | C. 选项三]`（严禁漏写方括号或只出开放问答题）。";
+
+            const msgsWithGuard = apiMessages.map((m, i) => {
+                if (i === apiMessages.length - 1 && m.role === "user" && formatTail) {
+                    if (Array.isArray(m.content)) {
+                        return {
+                            ...m,
+                            content: m.content.map(part => part.type === "text" ? { ...part, text: part.text + formatTail } : part)
+                        };
+                    }
+                    return { ...m, content: String(m.content) + formatTail };
+                }
+                return m;
+            });
+
+            const doFetch = async (messagesPayload) => {
+                const resp = await fetch(`${baseUrl}/chat/completions`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelName,
+                        messages: messagesPayload,
+                        temperature: 0.65
+                    })
+                });
+                const json = await resp.json();
+                return { resp, json };
+            };
+
+            let { resp, json } = await doFetch(msgsWithGuard);
+            if (!resp.ok || json.error || !json.choices?.[0]?.message) {
+                return { resp, json, parsed: null };
+            }
+
+            let rawReply = json.choices[0].message.content || "";
+            let parsed = parseModelReply(rawReply, sessionMode);
+
+            let retryCount = 0;
+            while (!isSummaryReq && (parsed.missingOptions || parsed.choices.length < 3) && retryCount < 2) {
+                retryCount += 1;
+                const retryMessages = [
+                    ...msgsWithGuard,
+                    { role: "assistant", content: rawReply },
+                    {
+                        role: "user",
+                        content: "你刚才的回复缺少完整的题干或缺少 3 个明确选项（A、B、C）！请立刻重写这一轮回复：先给出完整题干，再清晰列出 3 个选项（A. ...、B. ...、C. ...），最后一行严格附上 `[CHOICES: A. 选项一 | B. 选项二 | C. 选项三]`。"
+                    }
+                ];
+                const retryRes = await doFetch(retryMessages);
+                if (retryRes.resp.ok && retryRes.json?.choices?.[0]?.message) {
+                    rawReply = retryRes.json.choices[0].message.content || "";
+                    const retryParsed = parseModelReply(rawReply, sessionMode);
+                    if (!retryParsed.missingOptions && retryParsed.choices.length >= 2) {
+                        resp = retryRes.resp;
+                        json = retryRes.json;
+                        parsed = retryParsed;
+                        break;
+                    }
+                }
+            }
+
+            return { resp, json, parsed };
+        }
+
+        async function sendMessage(overrideText = null, isSummaryReq = false) {
+            if (isSendingRequest) return;
+
+            const inputField = document.getElementById("userInput");
+            const rawText = overrideText !== null ? overrideText : inputField.value.trim();
+            const imageToSend = pendingImageBase64;
+
+            if (!rawText && !imageToSend) return;
+
+            if (rawText === "✨ 前往兴趣世界探险") {
+                switchMode("interest");
+                return;
+            }
+            if (rawText === "💌 生成今日成长卡") {
+                requestGrowthCard();
+                return;
+            }
+            if (rawText === "重新生成这道题 🔄" || rawText === "重新生成探索选项 🔄") {
+                const activeHist = currentMode === "base" ? baseChatHistory : interestChatHistory;
+                while (activeHist.length > 0 && activeHist[activeHist.length - 1].role === "assistant" && activeHist[activeHist.length - 1].missingOptions) {
+                    activeHist.pop();
+                    if (activeHist.length > 0 && activeHist[activeHist.length - 1].role === "user") {
+                        activeHist.pop();
+                    }
+                }
+                saveAllStates();
+                const sub = dailyState.currentSubject || "当前学科";
+                const regenPrompt = currentMode === "base"
+                    ? `请重新出一道【${sub}】的选择题，必须给出完整题干和 3 个具体答案选项（A、B、C），并在最后一行包含 [CHOICES: A. ... | B. ... | C. ...]。`
+                    : `请重新生成当前【${storyState.worldSetting || "兴趣世界"}】场景的引导语和 3 个行动选项（A、B、C），并在最后一行包含 [CHOICES: A. ... | B. ... | C. ...]。`;
+                sendMessage(regenPrompt);
+                return;
+            }
+            if (rawText === "给我一点提示 💡" || rawText === "给我一点线索提示 💡") {
+                const sub = dailyState.currentSubject || "当前学科";
+                sendMessage(`请针对刚才那道【${sub}】问题给我一点思考提示，并同时写出原来的 3 个选项（A、B、C），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
+                return;
+            }
+
+            const subMatch = rawText.match(/(数学|语文|英语|科学)/);
+            if (subMatch && (rawText.includes("果实") || rawText.includes("挑战") || rawText.includes("进入【"))) {
+                if (currentMode !== "base") {
+                    currentMode = "base";
+                    switchMode("base");
+                }
+                dailyState.currentSubject = subMatch[1];
+            }
+
+            const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
+            const baseUrl = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
+            const modelName = localStorage.getItem(STORAGE_KEYS.MODEL) || "google/gemini-3-flash";
+
+            if (!apiKey) {
+                alert("请先点击右上角【⚙️ 模型设置】，输入并保存你的 API Key！");
+                toggleSettingsPanel();
+                return;
+            }
+
+            setSendingState(true);
+
+            const userText = rawText || "请布谷老师看看我上传的这张图片，和我一起观察聊一聊！";
+            if (overrideText === null) inputField.value = "";
+            clearPendingImage();
+            document.getElementById("voiceStatusBar").classList.add("hidden");
+
+            const sessionMode = currentMode;
+            const activeSubjectAtSend = dailyState.currentSubject;
+
+            if (sessionMode === "base" && !isSummaryReq) {
+                if (!dailyState.currentSubject) {
+                    const remaining = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
+                    dailyState.currentSubject = remaining[0] || "数学";
+                }
+                if (dailyState.status === "NOT_STARTED" || dailyState.status === "WAITING_CONFIRM") {
+                    dailyState.status = "IN_PROGRESS";
+                }
+                const curSub = dailyState.currentSubject;
+                dailyState.subjectTurns[curSub] = (dailyState.subjectTurns[curSub] || 0) + 1;
+            } else if (sessionMode === "interest" && !isSummaryReq) {
+                storyState.stageTurns = (storyState.stageTurns || 0) + 1;
+                storyState.waitingNodeChoice = false;
+            }
+
+            const activeHistory = sessionMode === "base" ? baseChatHistory : interestChatHistory;
+            activeHistory.push({
+                role: "user",
+                content: userText,
+                uploadedImage: imageToSend || null
+            });
+            saveAllStates();
+            syncStatusUI();
+            renderChatFromHistory();
+
+            updateSnakeUI(sessionMode === "base" ? "discovery" : "exploring", "布谷老师正在认真倾听，尼克也在竖起耳朵听呢...");
+
+            const loadingId = "loading-" + Date.now();
+            appendMessageBubble("布谷老师正在思考怎么回应你...", "model", loadingId);
+
+            try {
+                const apiMessages = [
+                    { role: "system", content: buildSystemPrompt() }
+                ];
+
+                const cleanHistory = activeHistory.filter(item => !(item.role === "assistant" && item.missingOptions));
+                const recentTurns = cleanHistory.slice(-14);
+                recentTurns.forEach((item, idx) => {
+                    const isLastUserWithImg = (idx === recentTurns.length - 1) && item.role === "user" && item.uploadedImage;
+                    if (isLastUserWithImg) {
+                        apiMessages.push({
+                            role: "user",
+                            content: [
+                                { type: "text", text: item.content },
+                                { type: "image_url", image_url: { url: item.uploadedImage } }
+                            ]
+                        });
+                    } else {
+                        apiMessages.push({
+                            role: item.role === "user" ? "user" : "assistant",
+                            content: item.content
+                        });
+                    }
+                });
+
+                const { resp: response, json: data, parsed } = await callChatCompletionWithFormatGuard(
+                    baseUrl,
+                    apiKey,
+                    modelName,
+                    apiMessages,
+                    sessionMode,
+                    isSummaryReq
+                );
+
+                const loadEl = document.getElementById(loadingId);
+                if (loadEl) loadEl.remove();
+
+                if (!response.ok || data.error) {
+                    const errMsg = data.error?.message || `请求失败（HTTP ${response.status}）`;
+                    appendErrorWithRetry(`连接布谷老师出错：${errMsg}`, userText, imageToSend);
+                    updateSnakeUI("companion", "哎呀，信号遇到了一点小阻碍，点“重试”再发一次吧。");
+                    return;
+                }
+
+                if (parsed) {
+                    if (parsed.newScene) storyState.currentScene = parsed.newScene;
+                    if (parsed.newClue && !storyState.discoveredClues.includes(parsed.newClue)) {
+                        storyState.discoveredClues.push(parsed.newClue);
+                    }
+
+                    const targetSub = dailyState.currentSubject || activeSubjectAtSend;
+                    if (sessionMode === "base" && !isSummaryReq && targetSub) {
+                        const turns = dailyState.subjectTurns[targetSub] || 0;
+                        const notYetEaten = !dailyState.completedSubjects.includes(targetSub);
+                        if (notYetEaten && ((parsed.subjectDone && turns >= 2) || turns >= 3)) {
+                            dailyState.status = "WAITING_CONFIRM";
+                        }
+                    }
+
+                    if (sessionMode === "interest" && !isSummaryReq && dailyState.completedSubjects.length >= 4) {
+                        if ((parsed.stageCheckpoint && storyState.stageTurns >= 2) || storyState.stageTurns >= 4) {
+                            storyState.waitingNodeChoice = true;
+                        }
+                    }
+
+                    activeHistory.push({
+                        role: "assistant",
+                        content: parsed.fullDisplayText,
+                        choices: parsed.choices,
+                        missingOptions: parsed.missingOptions
+                    });
+
+                    saveAllStates();
+                    syncStatusUI();
+                    renderChatFromHistory();
+                    speakText(parsed.fullDisplayText);
+
+                    if (dailyState.status === "WAITING_CONFIRM" && currentMode === "base") {
+                        updateSnakeUI("growing", `太棒啦！你完成了【${targetSub}】探索，快点下方按钮让尼克吃掉这颗果实吧！`);
+                    } else if (storyState.waitingNodeChoice && currentMode === "interest") {
+                        updateSnakeUI("exploring", "这一阶段的冒险告一段落啦！你可以选择继续挑战更高难度，或者结束本次探险~");
+                    } else if (currentMode === "interest") {
+                        updateSnakeUI("exploring", "探险越来越深入啦！看看布谷老师带来的新线索吧~");
+                    } else {
+                        updateSnakeUI("discovery", "很有想法！继续和布谷老师聊下去，尼克马上就能吃到果实啦~");
+                    }
+                } else {
+                    appendErrorWithRetry("模型返回的数据格式异常，未包含有效回复。", userText, imageToSend);
+                }
+            } catch (error) {
+                const loadEl = document.getElementById(loadingId);
+                if (loadEl) loadEl.remove();
+                appendErrorWithRetry(`网络连接异常：${error.message}`, userText, imageToSend);
+                updateSnakeUI("companion", "网络好像断了一下，检查网络后点重试吧~");
+            } finally {
+                setSendingState(false);
+            }
+        }
+
+        function parseModelReply(rawText, modeForReply = currentMode) {
+            let cleanText = rawText || "";
+            let subjectDone = false;
+            let stageCheckpoint = false;
+            let newScene = "";
+            let newClue = "";
+            let choices = [];
+            let missingOptions = false;
+
+            if (/\[(SUBJECT_DONE|SUGGEST_FINISH)\]/i.test(cleanText)) {
+                subjectDone = true;
+                cleanText = cleanText.replace(/\[(SUBJECT_DONE|SUGGEST_FINISH)\]/gi, "").trim();
+            }
+
+            if (/\[STAGE_CHECKPOINT\]/i.test(cleanText)) {
+                stageCheckpoint = true;
+                cleanText = cleanText.replace(/\[STAGE_CHECKPOINT\]/gi, "").trim();
+            }
+
+            const sceneMatch = cleanText.match(/\[SCENE:\s*(.*?)\]/i);
+            if (sceneMatch) {
+                newScene = sceneMatch[1].trim();
+                cleanText = cleanText.replace(sceneMatch[0], "").trim();
+            }
+
+            const clueMatch = cleanText.match(/\[CLUE:\s*(.*?)\]/i);
+            if (clueMatch) {
+                newClue = clueMatch[1].trim();
+                cleanText = cleanText.replace(clueMatch[0], "").trim();
+            }
+
+            const choicesMatch = cleanText.match(/[\[【]\s*CHOICES\s*[:：]\s*([\s\S]*?)[\]】]/i);
+            if (choicesMatch) {
+                choices = choicesMatch[1]
+                    .split(/[|｜\n]/)
+                    .map(s => s.replace(/^[-*•]\s*/, "").trim())
+                    .filter(Boolean);
+                cleanText = cleanText.replace(choicesMatch[0], "").trim();
+            }
+
+            if (choices.length === 0) {
+                const lines = cleanText.split("\n");
+                const extracted = [];
+                lines.forEach(line => {
+                    const trimmed = line.trim();
+                    if (/^(?:[-*•]\s*)?(?:[A-Da-d][\.\．、\)）:：]|[1-4][\.\．、\)）]|[①②③④])\s*\S+/.test(trimmed)) {
+                        extracted.push(trimmed.replace(/^[-*•]\s*/, ""));
+                    }
+                });
+                if (extracted.length >= 2) {
+                    choices = extracted;
+                }
+            }
+
+            let fullDisplayText = cleanText;
+
+            if (choices.length > 0 && !/missingOptions/i.test(String(choices[0]))) {
+                const hasInlineOptions = choices.every(opt => {
+                    const shortLabel = opt.replace(/^[A-Da-d][\.\．、\)）:：]\s*/, "").trim();
+                    return shortLabel && cleanText.includes(shortLabel);
+                });
+                if (!hasInlineOptions) {
+                    const optionsBlock = choices.map((opt, idx) => {
+                        const letter = ["A", "B", "C", "D"][idx] || String(idx + 1);
+                        const normalized = /^[A-Da-d][\.\．、\)）:：]/.test(opt) ? opt : `${letter}. ${opt}`;
+                        return `**${normalized}**`;
+                    }).join("\n");
+                    fullDisplayText = `${cleanText}\n\n${optionsBlock}`.trim();
+                }
+            }
+
+            if (choices.length === 0) {
+                missingOptions = true;
+                if (modeForReply === "base") {
+                    choices = ["重新生成这道题 🔄", "给我一点提示 💡"];
+                } else {
+                    choices = ["重新生成探索选项 🔄", "给我一点线索提示 💡"];
+                }
+            }
+
+            return { cleanText, fullDisplayText, subjectDone, stageCheckpoint, newScene, newClue, choices, missingOptions };
+        }
+
+        // ==================== 11. 聊天记录渲染与对话框上方横向快捷选项栏 ====================
+        function renderQuickChoiceBar(choices) {
+            const bar = document.getElementById("quickChoiceBar");
+            if (!bar) return;
+
+            if (!choices || choices.length === 0) {
+                bar.classList.add("hidden");
+                bar.innerHTML = "";
+                return;
+            }
+
+            const pillStyles = [
+                "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200",
+                "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-200",
+                "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200",
+                "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200"
+            ];
+
+            bar.innerHTML = "";
+            choices.forEach((optText, idx) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = `${pillStyles[idx % pillStyles.length]} px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold shadow-sm transition transform active:scale-95 cursor-pointer flex items-center gap-1.5 min-h-[44px]`;
+                btn.innerText = optText;
+                btn.onclick = () => {
+                    if (isSendingRequest) return;
+                    sendMessage(optText);
+                };
+                bar.appendChild(btn);
+            });
+            bar.classList.remove("hidden");
+        }
+
+        function formatRichBubbleText(rawText) {
+            const escaped = escapeHtml(rawText);
+            const lines = escaped.split("\n");
+            return lines.map(line => {
+                const trimmed = line.trim();
+                if (trimmed === "---" || trimmed === "***") {
+                    return `<hr class="my-2 border-emerald-200/70">`;
+                }
+                if (trimmed.startsWith("&gt;")) {
+                    const quoteBody = trimmed.replace(/^&gt;\s*/, "").replace(/\*\*(.+?)\*\*/g, '<strong class="text-emerald-900 font-extrabold">$1</strong>');
+                    return `<div class="my-1.5 pl-3 py-1 border-l-4 border-emerald-400 bg-white/80 rounded-r-lg font-bold text-emerald-900">${quoteBody}</div>`;
+                }
+                const withBold = line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-gray-900 font-extrabold">$1</strong>');
+                return `<div>${withBold || "&nbsp;"}</div>`;
+            }).join("");
+        }
+
+        function renderChatFromHistory() {
+            const container = document.getElementById("chatContainer");
+            container.innerHTML = "";
+            const activeHistory = currentMode === "base" ? baseChatHistory : interestChatHistory;
+
+            if (activeHistory.length === 0 && currentMode === "interest") {
+                const eaten = dailyState.completedSubjects.length;
+                const rem = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
+                const intro = eaten >= 4
+                    ? `✨ 恭喜集齐4科能量果实，兴趣世界已完全解锁！\n\n在这里，布谷老师会结合你【${learnerProfile.grade}】学过的课本知识，带着贪吃蛇尼克向更深、更有挑战的拓展领域进发，你也可以随时自由提问或编故事！`
+                    : `🌱 这里是兴趣世界预览区！目前贪吃蛇尼克已吃掉 **${eaten}/4** 颗学科果实。集齐【数学、语文、英语、科学】全部 4 颗果实后，就能开启完整自由的兴趣探险啦！`;
+                appendMessageBubble(intro, "model");
+                if (eaten >= 4) {
+                    renderQuickChoiceBar(["🦕 探索恐龙世界", "🐉 探索神话世界", "🪄 探索魔法奇幻", "🌿 探索自然奥秘"]);
+                } else {
+                    renderQuickChoiceBar(rem.map(s => `🍎 去收集【${s}】果实`));
+                }
+                return;
+            }
+
+            let latestAssistantChoices = [];
+            activeHistory.forEach((msg, idx) => {
+                if (msg.role === "user") {
+                    appendMessageBubble(msg.content, "user", "", msg.uploadedImage);
+                } else {
+                    let displayContent = msg.content;
+                    if (msg.missingOptions && currentMode === "base") {
+                        displayContent += "\n\n⚠️ 本轮未检测到完整题目选项，可点击下方按钮重新生成题目或获取提示。";
+                    }
+                    appendMessageBubble(displayContent, "model", "", null, msg.generatedImage);
+                    if (idx === activeHistory.length - 1) {
+                        latestAssistantChoices = msg.choices || [];
+                    }
+                }
+            });
+
+            renderQuickChoiceBar(latestAssistantChoices);
+        }
+
+        function appendMessageBubble(text, sender, customId = "", uploadedImg = null, generatedImg = null) {
+            const chatContainer = document.getElementById("chatContainer");
+            const div = document.createElement("div");
+            if (customId) div.id = customId;
+
+            if (sender === "user") {
+                div.className = "flex justify-end gap-2.5";
+                let imgHtml = uploadedImg ? `<img src="${uploadedImg}" class="max-w-[200px] max-h-[180px] rounded-xl mb-2 border border-emerald-400/50 object-cover">` : "";
+                div.innerHTML = `
+                    <div class="bg-emerald-600 text-white px-4 py-2.5 rounded-2xl rounded-tr-none max-w-[82%] text-sm shadow-xs leading-relaxed">
+                        ${imgHtml}
+                        <div>${escapeHtml(text)}</div>
+                    </div>
+                    <div class="w-8 h-8 shrink-0 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs shadow-2xs">我</div>
+                `;
+            } else {
+                div.className = "flex items-start gap-2.5";
+                let genImgHtml = generatedImg ? `<div class="mt-2.5"><img src="${generatedImg}" alt="故事插图" class="max-w-full sm:max-w-[340px] rounded-xl border border-purple-200 shadow-sm"></div>` : "";
+                const richHtml = formatRichBubbleText(text);
+
+                div.innerHTML = `
+                    <div class="w-8 h-8 shrink-0 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm shadow-xs" title="布谷老师">🦉</div>
+                    <div class="bg-emerald-50/90 text-gray-800 px-4 py-3 rounded-2xl rounded-tl-none max-w-[86%] text-sm shadow-xs border border-emerald-100 leading-relaxed space-y-0.5">
+                        <div class="text-[11px] font-bold text-amber-700 mb-1">布谷老师</div>
+                        ${richHtml}
+                        ${genImgHtml}
+                    </div>
+                `;
+            }
+
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function appendErrorWithRetry(errorText, retryText, retryImg) {
+            const chatContainer = document.getElementById("chatContainer");
+            const div = document.createElement("div");
+            div.className = "flex items-start gap-2.5";
+            const safeRetry = escapeHtml(retryText).replace(/'/g, "\\'");
+
+            div.innerHTML = `
+                <div class="w-8 h-8 shrink-0 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-xs shadow-xs">!</div>
+                <div class="bg-rose-50 text-rose-800 px-4 py-3 rounded-2xl rounded-tl-none max-w-[85%] text-xs sm:text-sm shadow-xs border border-rose-200 whitespace-pre-wrap leading-relaxed">
+                    <div>${escapeHtml(errorText)}</div>
+                    <button type="button" onclick="retryFailedMessage('${safeRetry}')" class="mt-2 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer">🔄 重新发送</button>
+                </div>
+            `;
+            window._lastFailedImage = retryImg || null;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function retryFailedMessage(text) {
+            if (window._lastFailedImage) {
+                pendingImageBase64 = window._lastFailedImage;
+            }
+            sendMessage(text);
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        }
+
+        // 启动初始化
+        loadAllStates();
+        initBaseWelcome();
+    </script>
+</body>
+</html>
