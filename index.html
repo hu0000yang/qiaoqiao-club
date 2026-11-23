@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+html_content = r'''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -18,8 +18,11 @@
             color: white;
             box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
         }
-        button, input, select {
+        button, input, select, textarea {
             touch-action: manipulation;
+        }
+        .modal-scroll {
+            -webkit-overflow-scrolling: touch;
         }
     </style>
 </head>
@@ -28,66 +31,129 @@
     <!-- 背景微互动粒子画布 -->
     <canvas id="bgCanvas"></canvas>
 
-    <!-- 顶部配置与每日状态栏 -->
-    <header class="relative z-10 w-full max-w-6xl bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg flex flex-col xl:flex-row justify-between items-center gap-2.5 border border-white/60">
-        <div class="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-between xl:justify-start">
-            <div class="flex items-center gap-2">
-                <span class="text-2xl" id="themeBadge">🌿</span>
+    <!-- 顶部主栏：左侧控制区 + 右侧每日奇遇插画横幅 -->
+    <header class="relative z-10 w-full max-w-6xl bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 border border-white/60">
+        <!-- 左侧标题与三大核心按钮 -->
+        <div class="flex flex-col justify-between gap-2.5 flex-1">
+            <div class="flex items-center gap-2.5">
+                <span class="text-2xl sm:text-3xl" id="themeBadge">🌿</span>
                 <div>
-                    <h1 class="text-base sm:text-lg font-extrabold text-gray-800 tracking-tight flex items-center gap-2">
+                    <h1 class="text-base sm:text-lg font-extrabold text-gray-800 tracking-tight flex flex-wrap items-center gap-2">
                         好奇心俱乐部
                         <span id="dailyStatusBadge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">今日学科果实：0/4</span>
                     </h1>
-                    <p id="headerSubtitle" class="text-[11px] text-gray-500">布谷老师与贪吃蛇尼克 · 每天一个新发现</p>
+                    <p id="headerSubtitle" class="text-[11px] sm:text-xs text-gray-500 mt-0.5">小学三年级（9岁）· 难度 Lv.1 · 布谷老师与贪吃蛇尼克</p>
                 </div>
             </div>
-            
-            <div class="flex items-center gap-1.5 flex-wrap">
-                <button type="button" onclick="openParentModal()" title="设置孩子年龄、年级与各学科课本进度" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer min-h-[38px]">
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" onclick="openParentModal()" title="设置孩子年龄、年级、课本单元课次与难度等级" class="bg-indigo-100 hover:bg-indigo-200 active:scale-95 text-indigo-800 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer min-h-[42px]">
                     👨‍👩‍👧 家长后台
                 </button>
-                <button type="button" onclick="startNewDay()" title="开启新一天的探索记录" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer min-h-[38px]">
+                <button type="button" onclick="startNewDay()" title="开启新一天的探索记录" class="bg-amber-100 hover:bg-amber-200 active:scale-95 text-amber-800 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer min-h-[42px]">
                     🌅 开启新的一天
                 </button>
-                <button type="button" onclick="toggleSettingsPanel()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer min-h-[38px]">
+                <button type="button" onclick="openModelModal()" title="配置模型接口地址、对话模型与 API 密钥" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer min-h-[42px]">
                     ⚙️ 模型设置
+                    <span id="modelStatusDot" class="w-2 h-2 rounded-full bg-rose-400" title="未配置密钥"></span>
+                    <span id="modelShortLabel" class="text-[10px] font-normal text-slate-500 max-w-[95px] truncate">未配置</span>
                 </button>
             </div>
         </div>
 
-        <!-- 模型与接口配置面板（自动读取 localStorage） -->
-        <div id="settingsBar" class="hidden xl:flex flex-wrap items-center gap-1.5 w-full xl:w-auto justify-end bg-gray-50/90 xl:bg-transparent p-2 xl:p-0 rounded-xl">
-            <input type="text" id="baseUrlInput" value="https://api.router.one/v1" placeholder="API 地址" class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg w-36 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
-            <input type="text" id="modelInput" value="google/gemini-3-flash" placeholder="对话模型名" class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg w-36 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
-            <input type="text" id="imageModelInput" value="" placeholder="生图模型(选填)" title="如支持图像生成的模型ID，留空则自动提示" class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg w-28 bg-white focus:outline-none focus:ring-2 focus:ring-purple-400">
-            <input type="password" id="apiKeyInput" placeholder="输入 sk-... 密钥" class="px-2 py-1.5 text-xs border border-gray-200 rounded-lg w-28 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
-            <button type="button" onclick="saveApiConfig()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold rounded-lg shadow-xs transition cursor-pointer">保存</button>
+        <!-- 右侧：每日奇遇动态插画横幅（每次打开自动生成不同绘本风插画，点击可换一幅） -->
+        <div class="relative w-full lg:w-[430px] h-[94px] sm:h-[102px] rounded-2xl overflow-hidden border border-emerald-100/90 shadow-inner shrink-0 group cursor-pointer" onclick="cycleHeroBanner()" title="点一点换一幅今日奇遇插画">
+            <canvas id="heroArtCanvas" width="860" height="204" class="w-full h-full object-cover"></canvas>
+            <div class="absolute top-2 left-2.5 bg-white/85 backdrop-blur-xs px-2.5 py-0.5 rounded-full text-[11px] font-extrabold text-gray-800 shadow-2xs flex items-center gap-1">
+                <span id="heroSceneIcon">🚀</span>
+                <span id="heroSceneTitle">今日奇遇 · 星空探索号</span>
+            </div>
+            <div class="absolute bottom-2 right-2.5 flex items-center gap-1.5">
+                <button type="button" id="aiHeroPaintBtn" onclick="event.stopPropagation(); generateAiHeroBanner();" class="hidden bg-purple-600/90 hover:bg-purple-700 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-xs cursor-pointer">
+                    ✨ AI重绘封面
+                </button>
+                <span class="bg-black/40 text-white/95 px-2 py-0.5 rounded-md text-[10px] font-medium backdrop-blur-xs">
+                    🎨 点画换景
+                </span>
+            </div>
         </div>
     </header>
 
-    <!-- 家长后台设定弹窗（年龄、年级、各学科课本进度与难度阶梯） -->
-    <div id="parentModal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-3">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 sm:p-6 border border-indigo-100 max-h-[90vh] overflow-y-auto">
+    <!-- 模型设置独立弹窗（适配 iPad 触控与键盘） -->
+    <div id="modelModal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-3">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-5 sm:p-6 border border-slate-200 max-h-[90vh] overflow-y-auto modal-scroll">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">⚙️</span>
+                    <div>
+                        <h2 class="text-base font-extrabold text-gray-800">模型与接口设置</h2>
+                        <p class="text-[11px] text-gray-500">密钥仅保存在当前设备浏览器本地，不会上传到代码仓库</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeModelModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-base font-bold flex items-center justify-center cursor-pointer">✕</button>
+            </div>
+
+            <div class="space-y-3.5 mt-4 text-xs sm:text-sm">
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">API 接口地址（Base URL）</label>
+                    <input type="text" id="baseUrlInput" value="https://api.router.one/v1" placeholder="https://api.router.one/v1" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[44px]">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">对话模型名称（Model ID）</label>
+                    <input type="text" id="modelInput" value="openai/gpt-5.6-luna" placeholder="例如：openai/gpt-5.6-luna 或 google/gemini-3-flash" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[44px]">
+                    <div class="flex flex-wrap gap-1.5 mt-1.5">
+                        <button type="button" onclick="fillQuickModel('openai/gpt-5.6-luna')" class="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-200 font-bold cursor-pointer">openai/gpt-5.6-luna</button>
+                        <button type="button" onclick="fillQuickModel('google/gemini-3-flash')" class="text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-200 font-bold cursor-pointer">google/gemini-3-flash</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">生图模型名称（选填，用于故事插图与封面）</label>
+                    <input type="text" id="imageModelInput" value="" placeholder="支持 /images/generations 的模型 ID，留空则不启用" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[44px]">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-gray-700 mb-1">API 密钥（sk-...）</label>
+                    <input type="password" id="apiKeyInput" placeholder="输入 sk-... 密钥" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[44px]">
+                </div>
+
+                <div id="modelSaveFeedback" class="hidden bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2 rounded-xl text-xs font-bold">
+                    ✅ 模型配置已成功保存！
+                </div>
+            </div>
+
+            <div class="mt-5 flex justify-end gap-2.5">
+                <button type="button" onclick="closeModelModal()" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer min-h-[44px]">取消</button>
+                <button type="button" onclick="saveApiConfig()" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer min-h-[44px]">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 家长后台设定弹窗（年级/学期/单元/课次级联下拉 + Lv.1~Lv.10 难度说明与手动选择） -->
+    <div id="parentModal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 border border-indigo-100 max-h-[92vh] overflow-y-auto modal-scroll">
             <div class="flex items-center justify-between pb-3 border-b border-gray-100">
                 <div class="flex items-center gap-2">
                     <span class="text-2xl">👨‍👩‍👧</span>
                     <div>
-                        <h2 class="text-base font-extrabold text-gray-800">家长后台 · 学习进度与难度匹配</h2>
-                        <p class="text-[11px] text-gray-500">布谷老师会根据这里的课本进度匹配题目，并随探索逐步升级难度</p>
+                        <h2 class="text-base sm:text-lg font-extrabold text-gray-800">家长后台 · 课本进度与难度匹配</h2>
+                        <p class="text-[11px] text-gray-500">选择当前年级、学期、单元与课次，保存后布谷老师将立即按此进度出题</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeParentModal()" class="text-gray-400 hover:text-gray-600 text-lg font-bold px-2 cursor-pointer">✕</button>
+                <button type="button" onclick="closeParentModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-base font-bold flex items-center justify-center cursor-pointer">✕</button>
             </div>
 
-            <div class="space-y-3.5 mt-4 text-xs">
-                <div class="grid grid-cols-2 gap-3">
+            <div class="space-y-4 mt-4 text-xs sm:text-sm">
+                <!-- 1. 孩子年龄、年级与学期 -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block font-bold text-gray-700 mb-1">孩子年龄（岁）</label>
-                        <input type="number" id="parentAgeInput" min="5" max="15" value="9" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <input type="number" id="parentAgeInput" min="5" max="15" value="9" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 min-h-[44px]">
                     </div>
                     <div>
                         <label class="block font-bold text-gray-700 mb-1">当前年级</label>
-                        <select id="parentGradeInput" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                        <select id="parentGradeInput" onchange="onGradeOrTermChange()" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 min-h-[44px]">
                             <option value="小学一年级">小学一年级</option>
                             <option value="小学二年级">小学二年级</option>
                             <option value="小学三年级" selected>小学三年级</option>
@@ -96,43 +162,94 @@
                             <option value="小学六年级">小学六年级</option>
                         </select>
                     </div>
-                </div>
-
-                <div class="bg-indigo-50/60 p-3 rounded-2xl border border-indigo-100 space-y-2.5">
-                    <div class="font-bold text-indigo-900 flex items-center justify-between">
-                        <span>📚 各学科当前课本进度（AI 出题依据）</span>
-                        <span class="text-[10px] font-normal text-indigo-600">可随时按学期单元更新</span>
-                    </div>
                     <div>
-                        <label class="block font-bold text-blue-700 mb-1">📐 数学课本进度</label>
-                        <input type="text" id="progMathInput" placeholder="例如：三上·万以内加减法、倍的认识、长方形周长" class="w-full px-3 py-1.5 border border-blue-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
-                    </div>
-                    <div>
-                        <label class="block font-bold text-rose-700 mb-1">📖 语文课本进度</label>
-                        <input type="text" id="progChineseInput" placeholder="例如：三上·童话想象单元、观察日记、修辞与阅读理解" class="w-full px-3 py-1.5 border border-rose-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-rose-400">
-                    </div>
-                    <div>
-                        <label class="block font-bold text-purple-700 mb-1">🔤 英语课本进度</label>
-                        <input type="text" id="progEnglishInput" placeholder="例如：三上·打招呼、文具与颜色、动物与日常问答" class="w-full px-3 py-1.5 border border-purple-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-purple-400">
-                    </div>
-                    <div>
-                        <label class="block font-bold text-emerald-700 mb-1">🔬 科学课本进度</label>
-                        <input type="text" id="progScienceInput" placeholder="例如：三上·水的三态变化、空气占据空间、天气观察" class="w-full px-3 py-1.5 border border-emerald-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                        <label class="block font-bold text-gray-700 mb-1">当前学期</label>
+                        <select id="parentTermInput" onchange="onGradeOrTermChange()" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 min-h-[44px]">
+                            <option value="上册" selected>上册（秋季学期）</option>
+                            <option value="下册">下册（春季学期）</option>
+                        </select>
                     </div>
                 </div>
 
-                <div class="bg-amber-50/70 p-3 rounded-2xl border border-amber-100 flex items-center justify-between gap-2">
-                    <div>
-                        <div class="font-bold text-amber-900">📈 当前自适应挑战阶梯：Lv.<span id="parentLevelDisplay">1</span></div>
-                        <div class="text-[11px] text-amber-700">每完成一个学科或成功探索，难度会自动微调升级；也可手动重置</div>
+                <!-- 2. 各学科课本进度（单元 + 课次级联下拉 + 补充备注） -->
+                <div class="bg-indigo-50/60 p-3.5 rounded-2xl border border-indigo-100 space-y-3">
+                    <div class="font-bold text-indigo-900 flex flex-wrap items-center justify-between gap-1">
+                        <span>📚 各学科当前课本进度（AI 出题精准依据）</span>
+                        <span class="text-[11px] font-normal text-indigo-600">先选单元与课次，可再补充细节</span>
                     </div>
-                    <button type="button" onclick="resetAdaptiveLevel()" class="bg-white hover:bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-lg font-bold shrink-0 cursor-pointer">重置为 Lv.1</button>
+
+                    <!-- 数学 -->
+                    <div class="bg-white p-3 rounded-xl border border-blue-100 space-y-2">
+                        <div class="font-bold text-blue-700 flex items-center justify-between">
+                            <span>📐 数学课本进度</span>
+                            <span id="previewTag-数学" class="text-[10px] font-normal text-blue-500"></span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select id="unitSelect-数学" onchange="onSubjectUnitChange('数学')" class="w-full px-2.5 py-2 border border-blue-200 rounded-xl bg-blue-50/30 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[42px]"></select>
+                            <select id="lessonSelect-数学" onchange="updateSubjectPreviewTag('数学')" class="w-full px-2.5 py-2 border border-blue-200 rounded-xl bg-blue-50/30 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[42px]"></select>
+                        </div>
+                        <input type="text" id="noteInput-数学" placeholder="补充重点（选填，如：多位数乘一位数连续进位、长方形周长应用）" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[40px]">
+                    </div>
+
+                    <!-- 语文 -->
+                    <div class="bg-white p-3 rounded-xl border border-rose-100 space-y-2">
+                        <div class="font-bold text-rose-700 flex items-center justify-between">
+                            <span>📖 语文课本进度</span>
+                            <span id="previewTag-语文" class="text-[10px] font-normal text-rose-500"></span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select id="unitSelect-语文" onchange="onSubjectUnitChange('语文')" class="w-full px-2.5 py-2 border border-rose-200 rounded-xl bg-rose-50/30 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-400 min-h-[42px]"></select>
+                            <select id="lessonSelect-语文" onchange="updateSubjectPreviewTag('语文')" class="w-full px-2.5 py-2 border border-rose-200 rounded-xl bg-rose-50/30 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-400 min-h-[42px]"></select>
+                        </div>
+                        <input type="text" id="noteInput-语文" placeholder="补充重点（选填，如：多音字辨析、比喻拟人句、古诗理解）" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-400 min-h-[40px]">
+                    </div>
+
+                    <!-- 英语 -->
+                    <div class="bg-white p-3 rounded-xl border border-purple-100 space-y-2">
+                        <div class="font-bold text-purple-700 flex items-center justify-between">
+                            <span>🔤 英语课本进度</span>
+                            <span id="previewTag-英语" class="text-[10px] font-normal text-purple-500"></span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select id="unitSelect-英语" onchange="onSubjectUnitChange('英语')" class="w-full px-2.5 py-2 border border-purple-200 rounded-xl bg-purple-50/30 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[42px]"></select>
+                            <select id="lessonSelect-英语" onchange="updateSubjectPreviewTag('英语')" class="w-full px-2.5 py-2 border border-purple-200 rounded-xl bg-purple-50/30 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[42px]"></select>
+                        </div>
+                        <input type="text" id="noteInput-英语" placeholder="补充重点（选填，如：颜色与动物词汇、What's this 句型问答）" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[40px]">
+                    </div>
+
+                    <!-- 科学 -->
+                    <div class="bg-white p-3 rounded-xl border border-emerald-100 space-y-2">
+                        <div class="font-bold text-emerald-700 flex items-center justify-between">
+                            <span>🔬 科学课本进度</span>
+                            <span id="previewTag-科学" class="text-[10px] font-normal text-emerald-500"></span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select id="unitSelect-科学" onchange="onSubjectUnitChange('科学')" class="w-full px-2.5 py-2 border border-emerald-200 rounded-xl bg-emerald-50/30 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[42px]"></select>
+                            <select id="lessonSelect-科学" onchange="updateSubjectPreviewTag('科学')" class="w-full px-2.5 py-2 border border-emerald-200 rounded-xl bg-emerald-50/30 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[42px]"></select>
+                        </div>
+                        <input type="text" id="noteInput-科学" placeholder="补充重点（选填，如：水沸腾与结冰温度、空气占据空间实验）" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[40px]">
+                    </div>
+                </div>
+
+                <!-- 3. 难度阶梯自由选择（Lv.1 ~ Lv.10，附带每档详细说明） -->
+                <div class="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 space-y-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <label for="parentLevelSelect" class="font-extrabold text-amber-900">📈 题目难度阶梯自由选择（Lv.1 ~ Lv.10）</label>
+                        <span class="text-[11px] text-amber-700">AI 将严格按所选档位控制思考步数与干扰项</span>
+                    </div>
+                    <select id="parentLevelSelect" onchange="updateLevelDescriptionPreview()" class="w-full px-3 py-2.5 border border-amber-300 rounded-xl bg-white text-xs sm:text-sm font-bold text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-400 min-h-[44px]"></select>
+                    <div id="levelDetailBox" class="bg-white/90 border border-amber-200 rounded-xl p-2.5 text-xs text-gray-700 leading-relaxed"></div>
+                </div>
+
+                <!-- 保存同步提示条 -->
+                <div id="parentSaveFeedback" class="hidden bg-emerald-50 border border-emerald-300 text-emerald-800 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2">
+                    <span>✅ 已保存并同步给布谷老师！后续题目将立即按新进度与新难度生成。</span>
                 </div>
             </div>
 
-            <div class="mt-5 flex justify-end gap-2">
-                <button type="button" onclick="closeParentModal()" class="px-4 py-2 rounded-xl text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">取消</button>
-                <button type="button" onclick="saveParentSettings()" class="px-5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer">保存并同步给布谷老师</button>
+            <div class="mt-5 flex justify-end gap-2.5">
+                <button type="button" onclick="closeParentModal()" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer min-h-[44px]">取消</button>
+                <button type="button" id="saveParentBtn" onclick="saveParentSettings()" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer min-h-[44px]">保存并同步给布谷老师</button>
             </div>
         </div>
     </div>
@@ -179,7 +296,7 @@
                     <span>当前探索：</span>
                     <span id="todayTopicDisplay" class="font-bold text-emerald-700 truncate max-w-[150px]">尚未选定学科</span>
                 </div>
-                <button type="button" id="ttsToggleBtn" onclick="toggleTTS()" class="w-full py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition cursor-pointer min-h-[38px]">
+                <button type="button" id="ttsToggleBtn" onclick="toggleTTS()" class="w-full py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition cursor-pointer min-h-[40px]">
                     🔊 布谷老师朗读：已开启
                 </button>
             </div>
@@ -192,34 +309,34 @@
             <div class="bg-gray-50/95 px-3 py-2 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
                 <!-- 双空间切换 -->
                 <div class="flex items-center gap-1.5 bg-gray-200/70 p-1 rounded-xl text-xs font-bold">
-                    <button type="button" id="tabBaseBtn" onclick="switchMode('base')" class="tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]">
+                    <button type="button" id="tabBaseBtn" onclick="switchMode('base')" class="tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[38px]">
                         🧭 今日基础探索
                     </button>
-                    <button type="button" id="tabInterestBtn" onclick="switchMode('interest')" class="text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]">
+                    <button type="button" id="tabInterestBtn" onclick="switchMode('interest')" class="text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[38px]">
                         ✨ 兴趣世界 <span id="interestLockIcon">🔒</span>
                     </button>
                 </div>
 
-                <!-- 学科入口 & 今日成长卡（集齐4颗果实后解锁闪亮状态） -->
+                <!-- 学科入口 & 今日成长卡 -->
                 <div id="baseSubjectBar" class="flex items-center gap-1.5 text-xs font-bold overflow-x-auto">
-                    <button type="button" id="btnSub-数学" onclick="startSubjectExplore('数学')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">📐 数学</button>
-                    <button type="button" id="btnSub-语文" onclick="startSubjectExplore('语文')" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">📖 语文</button>
-                    <button type="button" id="btnSub-英语" onclick="startSubjectExplore('英语')" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">🔤 英语</button>
-                    <button type="button" id="btnSub-科学" onclick="startSubjectExplore('科学')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">🔬 科学</button>
-                    <button type="button" id="growthCardBtn" onclick="requestGrowthCard()" class="bg-gray-300 text-gray-600 px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1 min-h-[36px]">
+                    <button type="button" id="btnSub-数学" onclick="startSubjectExplore('数学')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[38px]">📐 数学</button>
+                    <button type="button" id="btnSub-语文" onclick="startSubjectExplore('语文')" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[38px]">📖 语文</button>
+                    <button type="button" id="btnSub-英语" onclick="startSubjectExplore('英语')" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[38px]">🔤 英语</button>
+                    <button type="button" id="btnSub-科学" onclick="startSubjectExplore('科学')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[38px]">🔬 科学</button>
+                    <button type="button" id="growthCardBtn" onclick="requestGrowthCard()" class="bg-gray-300 text-gray-600 px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1 min-h-[38px]">
                         <span id="growthCardIcon">🔒</span> 今日成长卡
                     </button>
                 </div>
 
-                <!-- 兴趣世界顶部操作（仅在兴趣模式下显示） -->
+                <!-- 兴趣世界顶部操作 -->
                 <div id="interestTopBar" class="hidden items-center gap-1.5 text-xs font-bold flex-wrap">
-                    <button type="button" onclick="toggleInterestWorldDrawer()" class="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1.5 rounded-xl transition cursor-pointer min-h-[36px]">🗺️ 更换故事主题</button>
-                    <button type="button" onclick="requestStoryIllustration()" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">🎨 为故事配插图</button>
-                    <button type="button" onclick="requestGrowthCard()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[36px]">💌 今日成长卡</button>
+                    <button type="button" onclick="toggleInterestWorldDrawer()" class="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1.5 rounded-xl transition cursor-pointer min-h-[38px]">🗺️ 更换故事主题</button>
+                    <button type="button" onclick="requestStoryIllustration()" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[38px]">🎨 为故事配插图</button>
+                    <button type="button" onclick="requestGrowthCard()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[38px]">💌 今日成长卡</button>
                 </div>
             </div>
 
-            <!-- 兴趣世界主题选择与进阶探索面板（仅在兴趣模式下展示） -->
+            <!-- 兴趣世界主题选择与进阶探索面板 -->
             <div id="interestWorldPanel" class="hidden bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 px-4 py-3 border-b border-purple-100">
                 <div class="flex items-center justify-between mb-2">
                     <span id="interestAtmosphereBanner" class="text-[11px] font-bold text-purple-900">✨ 兴趣世界说明：集齐4科能量果实后解锁！在这里布谷老师会结合你学过的知识，带你向更深、更有挑战的拓展领域探险，也可以自由提问和编故事。</span>
@@ -230,15 +347,14 @@
                 </div>
 
                 <div id="worldSelectorButtons" class="flex flex-wrap gap-1.5 mb-2">
-                    <button type="button" onclick="selectInterestWorld('恐龙世界')" class="bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🦕 恐龙世界</button>
-                    <button type="button" onclick="selectInterestWorld('神话世界')" class="bg-white hover:bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🐉 神话世界</button>
-                    <button type="button" onclick="selectInterestWorld('魔法与奇幻世界')" class="bg-white hover:bg-purple-50 border border-purple-200 text-purple-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🪄 魔法与奇幻</button>
-                    <button type="button" onclick="selectInterestWorld('自然探索')" class="bg-white hover:bg-teal-50 border border-teal-200 text-teal-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🌿 自然探索</button>
-                    <button type="button" onclick="selectInterestWorld('工程与建造')" class="bg-white hover:bg-blue-50 border border-blue-200 text-blue-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">🏗️ 工程与建造</button>
-                    <button type="button" onclick="selectInterestWorld('故事创作')" class="bg-white hover:bg-rose-50 border border-rose-200 text-rose-800 px-2.5 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer">✍️ 故事创作</button>
+                    <button type="button" onclick="selectInterestWorld('恐龙世界')" class="bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer min-h-[36px]">🦕 恐龙世界</button>
+                    <button type="button" onclick="selectInterestWorld('神话世界')" class="bg-white hover:bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer min-h-[36px]">🐉 神话世界</button>
+                    <button type="button" onclick="selectInterestWorld('魔法与奇幻世界')" class="bg-white hover:bg-purple-50 border border-purple-200 text-purple-800 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer min-h-[36px]">🪄 魔法与奇幻</button>
+                    <button type="button" onclick="selectInterestWorld('自然探索')" class="bg-white hover:bg-teal-50 border border-teal-200 text-teal-800 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer min-h-[36px]">🌿 自然探索</button>
+                    <button type="button" onclick="selectInterestWorld('工程与建造')" class="bg-white hover:bg-blue-50 border border-blue-200 text-blue-800 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer min-h-[36px]">🏗️ 工程与建造</button>
+                    <button type="button" onclick="selectInterestWorld('故事创作')" class="bg-white hover:bg-rose-50 border border-rose-200 text-rose-800 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs cursor-pointer min-h-[36px]">✍️ 故事创作</button>
                 </div>
 
-                <!-- 独立故事状态与探索深度栏 -->
                 <div id="storyMemoryCard" class="bg-white/85 rounded-xl p-2 border border-purple-100 text-[11px] text-gray-600 flex flex-wrap items-center justify-between gap-2">
                     <div>
                         <span class="font-bold text-purple-700">当前世界：</span><span id="storyWorldName">未选择</span>
@@ -254,27 +370,27 @@
             <!-- 聊天与探索滚动区 -->
             <div id="chatContainer" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
 
-            <!-- 基础学科节点结束确认条（完成当前学科时吃掉对应果实） -->
+            <!-- 基础学科节点结束确认条 -->
             <div id="dailyConfirmBar" class="hidden px-4 py-2.5 bg-amber-50 border-t border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-2">
                 <span id="dailyConfirmText" class="text-xs font-bold text-amber-900">🌟 太棒了！你已经完成了当前学科的核心探索，要让尼克吃掉这颗能量果实吗？</span>
                 <div class="flex gap-2 shrink-0">
-                    <button type="button" id="eatFruitConfirmBtn" onclick="confirmEatSubjectFruit()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs cursor-pointer min-h-[40px]">
+                    <button type="button" id="eatFruitConfirmBtn" onclick="confirmEatSubjectFruit()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs cursor-pointer min-h-[42px]">
                         🍎 吃掉果实，继续下一科
                     </button>
-                    <button type="button" onclick="continueDailyExploration()" class="bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer min-h-[40px]">
+                    <button type="button" onclick="continueDailyExploration()" class="bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer min-h-[42px]">
                         🔍 再挑战一道升级题
                     </button>
                 </div>
             </div>
 
-            <!-- 兴趣世界阶段结束节点提示条（由孩子自主选择继续进阶或结束） -->
+            <!-- 兴趣世界阶段结束节点提示条 -->
             <div id="interestNodeBar" class="hidden px-4 py-2.5 bg-purple-50 border-t border-purple-200 flex flex-col sm:flex-row items-center justify-between gap-2">
                 <span id="interestNodeText" class="text-xs font-bold text-purple-900">🧭 冒险节点达成！你已经解开了这一阶段的奥秘，接下来你想怎么选？</span>
                 <div class="flex gap-2 shrink-0">
-                    <button type="button" onclick="continueInterestDeepExplore()" class="bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs cursor-pointer min-h-[40px]">
+                    <button type="button" onclick="continueInterestDeepExplore()" class="bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs cursor-pointer min-h-[42px]">
                         🚀 继续深入，挑战更高难度
                     </button>
-                    <button type="button" onclick="finishInterestSession()" class="bg-white hover:bg-purple-100 text-purple-800 border border-purple-300 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer min-h-[40px]">
+                    <button type="button" onclick="finishInterestSession()" class="bg-white hover:bg-purple-100 text-purple-800 border border-purple-300 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer min-h-[42px]">
                         🏁 结束本次探险并生成总结
                     </button>
                 </div>
@@ -326,7 +442,7 @@
     </footer>
 
     <script>
-        // ==================== 1. 动态背景与粒子 ====================
+        // ==================== 1. 动态背景与顶部每日奇遇插画横幅 ====================
         const THEMES = [
             { name: "森林晨光", bg: "from-teal-500 via-emerald-600 to-cyan-700", badge: "🌿", particleColor: "rgba(255,255,255,0.35)" },
             { name: "奇幻星海", bg: "from-indigo-500 via-purple-600 to-blue-700", badge: "✨", particleColor: "rgba(255,255,220,0.4)" },
@@ -362,18 +478,567 @@
         }
         animateBg();
 
-        // ==================== 2. 独立状态管理系统 ====================
+        // 顶部每日奇遇插画横幅（内置 4 幅绘本矢量动画场景，每次打开随机一幅）
+        const HERO_SCENES = [
+            { id: "space", icon: "🚀", title: "今日奇遇 · 星空探索号" },
+            { id: "dino", icon: "🦕", title: "今日奇遇 · 史前恐龙山谷" },
+            { id: "ocean", icon: "🐳", title: "今日奇遇 · 深海珊瑚实验室" },
+            { id: "castle", icon: "🏰", title: "今日奇遇 · 云端魔法图书馆" }
+        ];
+        let heroSceneIndex = Math.floor(Math.random() * HERO_SCENES.length);
+        let heroAiImageObj = null;
+        let heroClock = 0;
+
+        function cycleHeroBanner() {
+            heroAiImageObj = null;
+            heroSceneIndex = (heroSceneIndex + 1) % HERO_SCENES.length;
+            updateHeroBannerLabel();
+        }
+
+        function updateHeroBannerLabel() {
+            const sc = HERO_SCENES[heroSceneIndex];
+            document.getElementById("heroSceneIcon").innerText = heroAiImageObj ? "🎨" : sc.icon;
+            document.getElementById("heroSceneTitle").innerText = heroAiImageObj ? "今日奇遇 · AI 专属绘本封面" : sc.title;
+        }
+
+        function renderHeroBannerCanvas() {
+            const canvas = document.getElementById("heroArtCanvas");
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            const w = canvas.width;
+            const h = canvas.height;
+            heroClock += 0.03;
+
+            if (heroAiImageObj) {
+                ctx.drawImage(heroAiImageObj, 0, 0, w, h);
+                requestAnimationFrame(renderHeroBannerCanvas);
+                return;
+            }
+
+            const sc = HERO_SCENES[heroSceneIndex].id;
+            ctx.clearRect(0, 0, w, h);
+
+            if (sc === "space") {
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                grad.addColorStop(0, "#1E1B4B");
+                grad.addColorStop(0.55, "#312E81");
+                grad.addColorStop(1, "#0F766E");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+
+                for (let i = 0; i < 28; i++) {
+                    const sx = (i * 97 + 40) % w;
+                    const sy = (i * 53 + 20) % (h - 20);
+                    const r = 1.5 + Math.sin(heroClock * 2 + i) * 1.2;
+                    ctx.fillStyle = i % 3 === 0 ? "#FDE047" : "#FFFFFF";
+                    ctx.beginPath(); ctx.arc(sx, sy, Math.max(0.6, r), 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.fillStyle = "#F59E0B";
+                ctx.beginPath(); ctx.arc(690, 74, 34, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = "rgba(253, 224, 71, 0.75)";
+                ctx.lineWidth = 6;
+                ctx.beginPath(); ctx.ellipse(690, 74, 62, 16, -0.25, 0, Math.PI * 2); ctx.stroke();
+
+                const shipY = 112 + Math.sin(heroClock * 1.6) * 8;
+                ctx.fillStyle = "#F8FAFC";
+                ctx.beginPath(); ctx.ellipse(470, shipY, 54, 24, -0.08, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#38BDF8";
+                ctx.beginPath(); ctx.arc(472, shipY - 12, 22, Math.PI, 0); ctx.fill();
+                ctx.fillStyle = "#FB7185";
+                ctx.beginPath(); ctx.arc(408 - Math.sin(heroClock * 8) * 5, shipY + 5, 11, 0, Math.PI * 2); ctx.fill();
+            } else if (sc === "dino") {
+                const grad = ctx.createLinearGradient(0, 0, 0, h);
+                grad.addColorStop(0, "#FEF3C7");
+                grad.addColorStop(0.55, "#A7F3D0");
+                grad.addColorStop(1, "#34D399");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+
+                ctx.fillStyle = "#FBBF24";
+                ctx.beginPath(); ctx.arc(760, 48, 28, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#6EE7B7";
+                ctx.beginPath(); ctx.moveTo(420, h); ctx.lineTo(540, 62); ctx.lineTo(660, h); ctx.fill();
+                ctx.fillStyle = "#10B981";
+                ctx.beginPath(); ctx.moveTo(580, h); ctx.lineTo(710, 48); ctx.lineTo(840, h); ctx.fill();
+
+                const bob = Math.sin(heroClock * 1.5) * 4;
+                ctx.fillStyle = "#059669";
+                ctx.beginPath(); ctx.ellipse(470, 148, 48, 28, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.lineWidth = 18; ctx.strokeStyle = "#059669"; ctx.lineCap = "round";
+                ctx.beginPath(); ctx.moveTo(505, 140); ctx.quadraticCurveTo(535, 95, 552, 68 + bob); ctx.stroke();
+                ctx.beginPath(); ctx.arc(560, 66 + bob, 16, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#FFFFFF";
+                ctx.beginPath(); ctx.arc(565, 63 + bob, 4, 0, Math.PI * 2); ctx.fill();
+            } else if (sc === "ocean") {
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                grad.addColorStop(0, "#0284C7");
+                grad.addColorStop(0.6, "#0EA5E9");
+                grad.addColorStop(1, "#2DD4BF");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+
+                for (let i = 0; i < 16; i++) {
+                    const bx = (i * 67 + 340) % w;
+                    const by = h - ((heroClock * 26 + i * 29) % h);
+                    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(bx, by, 4 + (i % 4) * 2, 0, Math.PI * 2); ctx.stroke();
+                }
+                const wy = 118 + Math.sin(heroClock * 1.8) * 7;
+                ctx.fillStyle = "#38BDF8";
+                ctx.beginPath(); ctx.ellipse(560, wy, 64, 34, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#E0F2FE";
+                ctx.beginPath(); ctx.ellipse(560, wy + 14, 52, 16, 0, 0, Math.PI); ctx.fill();
+                ctx.fillStyle = "#1E293B";
+                ctx.beginPath(); ctx.arc(596, wy - 4, 4.5, 0, Math.PI * 2); ctx.fill();
+            } else {
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                grad.addColorStop(0, "#F3E8FF");
+                grad.addColorStop(0.5, "#DDD6FE");
+                grad.addColorStop(1, "#FBCFE8");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+
+                ctx.fillStyle = "rgba(255,255,255,0.85)";
+                ctx.beginPath(); ctx.arc(440, 155, 34, 0, Math.PI * 2); ctx.arc(478, 150, 40, 0, Math.PI * 2); ctx.arc(520, 158, 30, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#8B5CF6";
+                ctx.fillRect(610, 88, 36, 95);
+                ctx.fillRect(665, 66, 44, 117);
+                ctx.fillStyle = "#EC4899";
+                ctx.beginPath(); ctx.moveTo(605, 88); ctx.lineTo(628, 48); ctx.lineTo(651, 88); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(658, 66); ctx.lineTo(687, 22); ctx.lineTo(716, 66); ctx.fill();
+
+                const bookY = 92 + Math.sin(heroClock * 2) * 6;
+                ctx.fillStyle = "#F59E0B";
+                ctx.fillRect(465, bookY, 44, 30);
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(469, bookY + 4, 36, 22);
+            }
+
+            requestAnimationFrame(renderHeroBannerCanvas);
+        }
+        updateHeroBannerLabel();
+        renderHeroBannerCanvas();
+
+        // ==================== 2. 课程知识库（年级 -> 学期 -> 单元 -> 课次）与难度阶梯说明 ====================
+        const DIFFICULTY_LEVELS = [
+            { lv: 1, title: "Lv.1 · 课内基础启蒙", desc: "直接对应课本例题水平，单步思考即可得出结果，干扰项与正确答案差异明显，建立信心。" },
+            { lv: 2, title: "Lv.2 · 课内稳固练习", desc: "紧扣本课核心概念，需要 1~2 步简单转换或理解关键词，干扰项为常见粗心点。" },
+            { lv: 3, title: "Lv.3 · 生活情境应用", desc: "将本课知识放进购物、测量、自然观察等生活故事中，需从对话里提取 2 个条件再作答。" },
+            { lv: 4, title: "Lv.4 · 易混概念辨析", desc: "加入单位换算、多音字/近义词辨析或实验对照组判断，干扰项会针对典型易错点设置。" },
+            { lv: 5, title: "Lv.5 · 两步综合推理", desc: "需要先把隐含条件算出来或读出来，再进行第二步判断，考验审题完整度与逻辑条理。" },
+            { lv: 6, title: "Lv.6 · 逆向思维挑战", desc: "从结果倒推条件（如已知周长求边长、根据现象反推实验原因），干扰项具有一定迷惑性。" },
+            { lv: 7, title: "Lv.7 · 跨单元知识串联", desc: "把当前课次与本学期前面学过的单元结合起来综合运用，需经历 2~3 个思考步骤。" },
+            { lv: 8, title: "Lv.8 · 思维拓展进阶", desc: "融入数形结合、逻辑排除、深层阅读推断或变量控制实验设计，干扰项需仔细验算才能排除。" },
+            { lv: 9, title: "Lv.9 · 浅奥/高阶探究", desc: "面向学有余力孩子的进阶思考题，包含多条件统筹、规律归纳或科学假设验证，步骤清晰严谨。" },
+            { lv: 10, title: "Lv.10 · 综合创新大师", desc: "最高挑战阶梯，结合真实复杂问题进行多步推理、对比分析与迁移创新，全面锻炼高阶思维。" }
+        ];
+
+        const CURRICULUM_DB = {
+            "小学一年级": {
+                "上册": {
+                    "数学": [
+                        { unit: "第一单元·准备课与比一比", lessons: ["第1课·数一数", "第2课·比多少", "单元综合整理"] },
+                        { unit: "第二单元·位置", lessons: ["第1课·上、下、前、后", "第2课·左、右", "单元综合整理"] },
+                        { unit: "第三单元·1~5的认识和加减法", lessons: ["第1课·1~5的认识与比大小", "第2课·分与合", "第3课·加法与减法", "第4课·0的认识"] },
+                        { unit: "第四单元·认识图形（一）", lessons: ["第1课·认识立体图形", "第2课·拼搭与分类"] },
+                        { unit: "第五单元·6~10的认识和加减法", lessons: ["第1课·6和7的加减法", "第2课·8和9的加减法", "第3课·10的认识与加减法", "第4课·连加连减与加减混合"] },
+                        { unit: "第六单元·11~20各数的认识", lessons: ["第1课·11~20的数数与组成", "第2课·10加几与十几加几"] },
+                        { unit: "第七单元·认识钟表", lessons: ["第1课·认识整时", "单元综合整理"] },
+                        { unit: "第八单元·20以内的进位加法", lessons: ["第1课·9加几", "第2课·8、7、6加几", "第3课·5、4、3、2加几", "第4课·解决问题"] }
+                    ],
+                    "语文": [
+                        { unit: "第一单元·识字天地", lessons: ["1. 天地人", "2. 金木水火土", "3. 口耳目", "4. 日月水火", "5. 对韵歌"] },
+                        { unit: "第二单元·汉语拼音（一）", lessons: ["1. a o e", "2. i u ü y w", "3. b p m f", "4. d t n l", "5. g k h / j q x / z c s / zh ch sh r"] },
+                        { unit: "第三单元·汉语拼音（二）", lessons: ["9. ai ei ui / ao ou iu", "11. ie üe er", "12. an en in un ün / ang eng ing ong"] },
+                        { unit: "第四单元·自然与四季", lessons: ["1. 秋天", "2. 小小的船", "3. 江南", "4. 四季"] },
+                        { unit: "第五单元·识字与观察", lessons: ["6. 画", "7. 大小多少", "8. 小书包", "9. 日月明", "10. 升国旗"] },
+                        { unit: "第六单元·童趣与想象", lessons: ["5. 影子", "6. 比尾巴", "7. 青蛙写诗", "8. 雨点儿"] },
+                        { unit: "第七单元·成长与生活", lessons: ["9. 明天要远足", "10. 大还是小", "11. 项链"] },
+                        { unit: "第八单元·动物与故事", lessons: ["12. 雪地里的小画家", "13. 乌鸦喝水", "14. 小蜗牛"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · Hello & Greetings", lessons: ["Lesson 1·Hello! Hi!", "Lesson 2·What's your name?", "Lesson 3·Goodbye!"] },
+                        { unit: "Unit 2 · School Things", lessons: ["Lesson 1·Book, ruler, pencil", "Lesson 2·I have a schoolbag", "Lesson 3·Review"] },
+                        { unit: "Unit 3 · Animals", lessons: ["Lesson 1·Cat, dog, bird", "Lesson 2·What's this? It's a...", "Lesson 3·Review"] },
+                        { unit: "Unit 4 · Numbers 1-10", lessons: ["Lesson 1·Count 1 to 5", "Lesson 2·Count 6 to 10", "Lesson 3·How many?"] },
+                        { unit: "Unit 5 · Colours", lessons: ["Lesson 1·Red, yellow, blue, green", "Lesson 2·What colour is it?", "Lesson 3·Review"] },
+                        { unit: "Unit 6 · Fruit", lessons: ["Lesson 1·Apple, banana, pear, orange", "Lesson 2·Do you like apples?", "Lesson 3·Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·植物", lessons: ["1. 我们知道的植物", "2. 观察一棵植物", "3. 观察叶", "4. 这是谁的叶", "5. 植物是“活”的吗"] },
+                        { unit: "第二单元·比较与测量", lessons: ["1. 在观察中比较", "2. 起点和终点", "3. 用手来测量", "4. 用不同的物体来测量", "5. 用相同的物体来测量"] }
+                    ]
+                },
+                "下册": {
+                    "数学": [
+                        { unit: "第一单元·认识图形（二）", lessons: ["第1课·认识平面图形", "第2课·平面图形的拼组"] },
+                        { unit: "第二单元·20以内的退位减法", lessons: ["第1课·十几减9", "第2课·十几减8、7、6", "第3课·十几减5、4、3、2", "第4课·解决问题"] },
+                        { unit: "第三单元·分类与整理", lessons: ["第1课·按给定标准分类", "第2课·自选标准分类计数"] },
+                        { unit: "第四单元·100以内数的认识", lessons: ["第1课·数数与数的组成", "第2课·读数与写数", "第3课·数的顺序与比较大小", "第4课·整十数加一位数及相应减法"] },
+                        { unit: "第五单元·认识人民币", lessons: ["第1课·认识元、角、分", "第2课·人民币的简单计算"] },
+                        { unit: "第六单元·100以内的加法和减法（一）", lessons: ["第1课·整十数加、减整十数", "第2课·两位数加一位数、整十数", "第3课·两位数减一位数、整十数", "第4课·认识小括号"] },
+                        { unit: "第七单元·找规律", lessons: ["第1课·图形与数字的变化规律", "单元综合整理"] }
+                    ],
+                    "语文": [
+                        { unit: "第一单元·识字与春天", lessons: ["1. 春夏秋冬", "2. 姓氏歌", "3. 小青蛙", "4. 猜字谜"] },
+                        { unit: "第二单元·心愿与爱国", lessons: ["1. 吃水不忘挖井人", "2. 我多想去看看", "3. 一个接一个", "4. 四个太阳"] },
+                        { unit: "第三单元·伙伴与快乐", lessons: ["5. 小公鸡和小鸭子", "6. 树和喜鹊", "7. 怎么都快乐"] },
+                        { unit: "第四单元·家人与亲情", lessons: ["8. 静夜思", "9. 夜色", "10. 端午粽", "11. 彩虹"] },
+                        { unit: "第五单元·识字与生活", lessons: ["5. 动物儿歌", "6. 古对今", "7. 操场上", "8. 人之初"] },
+                        { unit: "第六单元·夏天与自然", lessons: ["12. 古诗二首（池上/小池）", "13. 荷叶圆圆", "14. 要下雨了"] },
+                        { unit: "第七单元·好习惯", lessons: ["15. 文具的家", "16. 一分钟", "17. 动物王国开大会", "18. 小猴子下山"] },
+                        { unit: "第八单元·科普与童话", lessons: ["19. 棉花姑娘", "20. 咕咚", "21. 小壁虎借尾巴"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · Classroom", lessons: ["Lesson 1·Desk, chair, blackboard", "Lesson 2·Where is the book?", "Lesson 3·Review"] },
+                        { unit: "Unit 2 · Room & Toys", lessons: ["Lesson 1·Ball, doll, car, plane", "Lesson 2·What's in the box?", "Lesson 3·Review"] },
+                        { unit: "Unit 3 · Food & Drink", lessons: ["Lesson 1·Rice, noodles, milk, juice", "Lesson 2·I'm hungry / thirsty", "Lesson 3·Review"] },
+                        { unit: "Unit 4 · Family", lessons: ["Lesson 1·Father, mother, sister, brother", "Lesson 2·Who is he/she?", "Lesson 3·Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·我们周围的物体", lessons: ["1. 发现物体的特征", "2. 谁轻谁重", "3. 认识物体的形状", "4. 给物体分类", "5. 观察一瓶水", "6. 它们去哪里了", "7. 认识一袋空气"] },
+                        { unit: "第二单元·动物", lessons: ["1. 我们周围的动物", "2. 校园里的动物", "3. 观察一种动物", "4. 给动物建个“家”", "5. 观察鱼", "6. 给动物分类"] }
+                    ]
+                }
+            },
+            "小学二年级": {
+                "上册": {
+                    "数学": [
+                        { unit: "第一单元·长度单位", lessons: ["第1课·认识厘米和米", "第2课·认识线段", "第3课·解决问题"] },
+                        { unit: "第二单元·100以内的加法和减法（二）", lessons: ["第1课·不进位加与进位加", "第2课·不退位减与退位减", "第3课·连加、连减和加减混合"] },
+                        { unit: "第三单元·角的初步认识", lessons: ["第1课·认识角", "第2课·认识直角、锐角和钝角"] },
+                        { unit: "第四单元·表内乘法（一）", lessons: ["第1课·乘法的初步认识", "第2课·5的乘法口诀", "第3课·2、3、4的乘法口诀", "第4课·乘加、乘减与6的口诀"] },
+                        { unit: "第五单元·观察物体（一）", lessons: ["第1课·从不同位置观察物体", "单元综合整理"] },
+                        { unit: "第六单元·表内乘法（二）", lessons: ["第1课·7的乘法口诀", "第2课·8的乘法口诀", "第3课·9的乘法口诀", "第4课·解决问题"] },
+                        { unit: "第七单元·认识时间", lessons: ["第1课·认识几时几分", "第2课·时间的简单推理"] },
+                        { unit: "第八单元·数学广角——搭配（一）", lessons: ["第1课·简单的排列与组合", "单元综合整理"] }
+                    ],
+                    "语文": [
+                        { unit: "第一单元·大自然的秘密", lessons: ["1. 小蝌蚪找妈妈", "2. 我是什么", "3. 植物妈妈有办法"] },
+                        { unit: "第二单元·识字与自然百科", lessons: ["1. 场景歌", "2. 树之歌", "3. 拍手歌", "4. 田家四季歌"] },
+                        { unit: "第三单元·儿童生活", lessons: ["4. 曹冲称象", "5. 玲玲的画", "6. 一封信", "7. 妈妈睡了"] },
+                        { unit: "第四单元·家乡与风景", lessons: ["8. 古诗二首（登鹳雀楼/望庐山瀑布）", "9. 黄山奇石", "10. 日月潭", "11. 葡萄沟"] },
+                        { unit: "第五单元·思维方法与寓言", lessons: ["12. 坐井观天", "13. 寒号鸟", "14. 我要的是葫芦"] },
+                        { unit: "第六单元·伟人故事", lessons: ["15. 大禹治水", "16. 朱德的扁担", "17. 难忘的泼水节"] },
+                        { unit: "第七单元·想象与自然现象", lessons: ["18. 古诗二首（夜宿山寺/敕勒歌）", "19. 雾在哪里", "20. 雪孩子"] },
+                        { unit: "第八单元·相处之道", lessons: ["21. 狐假虎威", "22. 狐狸分奶酪", "23. 纸船和风筝", "24. 风娃娃"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · My Family", lessons: ["Lesson 1·Family members", "Lesson 2·He is my father", "Lesson 3·Review"] },
+                        { unit: "Unit 2 · Boys and Girls", lessons: ["Lesson 1·Classmate & friend", "Lesson 2·What's his/her name?", "Lesson 3·Review"] },
+                        { unit: "Unit 3 · My Friends", lessons: ["Lesson 1·Tall, short, thin, pretty", "Lesson 2·She is tall", "Lesson 3·Review"] },
+                        { unit: "Unit 4 · In the Community", lessons: ["Lesson 1·Bookshop, zoo, school, park", "Lesson 2·Where are you going?", "Lesson 3·Review"] },
+                        { unit: "Unit 5 · In the Park", lessons: ["Lesson 1·Tree, flower, boat, lake", "Lesson 2·There is a boat", "Lesson 3·Review"] },
+                        { unit: "Unit 6 · Happy Holidays", lessons: ["Lesson 1·Card, present, New Year", "Lesson 2·Happy New Year!", "Lesson 3·Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·我们的地球家园", lessons: ["1. 地球家园中有什么", "2. 土壤——动植物的乐园", "3. 太阳的位置和方向", "4. 观察月相", "5. 各种各样的天气", "6. 不同的季节", "7. 做大自然的孩子"] },
+                        { unit: "第二单元·材料", lessons: ["1. 我们生活的世界", "2. 不同材料的餐具", "3. 书的历史", "4. 神奇的纸", "5. 椅子不简单", "6. 做一顶帽子"] }
+                    ]
+                },
+                "下册": {
+                    "数学": [
+                        { unit: "第一单元·数据收集整理", lessons: ["第1课·统计表与数据收集", "单元综合整理"] },
+                        { unit: "第二单元·表内除法（一）", lessons: ["第1课·平均分", "第2课·除法算式各部分名称", "第3课·用2~6的乘法口诀求商"] },
+                        { unit: "第三单元·图形的运动（一）", lessons: ["第1课·轴对称图形", "第2课·平移和旋转"] },
+                        { unit: "第四单元·表内除法（二）", lessons: ["第1课·用7、8、9的乘法口诀求商", "第2课·解决问题"] },
+                        { unit: "第五单元·混合运算", lessons: ["第1课·同级与两级混合运算", "第2课·带小括号的混合运算", "第3课·两步计算解决问题"] },
+                        { unit: "第六单元·有余数的除法", lessons: ["第1课·有余数除法的意义", "第2课·余数与除数的关系", "第3课·周期规律问题"] },
+                        { unit: "第七单元·万以内数的认识", lessons: ["第1课·1000以内数的认识", "第2课·10000以内数的认识与大小比较", "第3课·整百、整千数加减法"] },
+                        { unit: "第八单元·克和千克", lessons: ["第1课·认识克和千克", "第2课·质量估测与解决问题"] }
+                    ],
+                    "语文": [
+                        { unit: "第一单元·春天来了", lessons: ["1. 古诗二首（村居/咏柳）", "2. 找春天", "3. 开满鲜花的小路", "4. 邓小平爷爷植树"] },
+                        { unit: "第二单元·关爱与奉献", lessons: ["5. 雷锋叔叔，你在哪里", "6. 千人糕", "7. 一匹出色的马"] },
+                        { unit: "第三单元·传统文化识字", lessons: ["1. 神州谣", "2. 传统节日", "3. “贝”的故事", "4. 中国美食"] },
+                        { unit: "第四单元·童心与梦境", lessons: ["8. 彩色的梦", "9. 枫树上的喜鹊", "10. 沙滩上的童话", "11. 我是一只小虫子"] },
+                        { unit: "第五单元·办法与哲理", lessons: ["12. 寓言二则（亡羊补牢/揠苗助长）", "13. 画杨桃", "14. 小马过河"] },
+                        { unit: "第六单元·大自然的奥秘", lessons: ["15. 古诗二首（晓出净慈寺送林子方/绝句）", "16. 雷雨", "17. 要是你在野外迷了路", "18. 太空生活趣事多"] },
+                        { unit: "第七单元·改变与成长", lessons: ["19. 大象的耳朵", "20. 蜘蛛开店", "21. 青蛙卖泥塘", "22. 小毛虫"] },
+                        { unit: "第八单元·世界之初", lessons: ["23. 祖先的摇篮", "24. 当世界年纪还小的时候", "25. 羿射九日"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · Playtime", lessons: ["Lesson 1·Play football, fly a kite", "Lesson 2·Can you play football?", "Lesson 3·Review"] },
+                        { unit: "Unit 2 · Weather", lessons: ["Lesson 1·Sunny, cloudy, rainy, snowy", "Lesson 2·What's the weather like?", "Lesson 3·Review"] },
+                        { unit: "Unit 3 · Seasons", lessons: ["Lesson 1·Spring, summer, autumn, winter", "Lesson 2·What's your favourite season?", "Lesson 3·Review"] },
+                        { unit: "Unit 4 · Time & Daily Life", lessons: ["Lesson 1·Get up, go to school", "Lesson 2·What time is it?", "Lesson 3·Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·磁铁", lessons: ["1. 磁铁能吸引什么", "2. 磁铁怎样吸引物体", "3. 磁铁的两极", "4. 磁极与方向", "5. 做一个指南针", "6. 磁极间的相互作用"] },
+                        { unit: "第二单元·我们自己", lessons: ["1. 观察我们的身体", "2. 通过感官来发现", "3. 观察与比较", "4. 测试反应快慢", "5. 发现生长"] }
+                    ]
+                }
+            },
+            "小学三年级": {
+                "上册": {
+                    "数学": [
+                        { unit: "第一单元·时、分、秒", lessons: ["第1课·秒的认识", "第2课·时间的计算", "单元综合复习"] },
+                        { unit: "第二单元·万以内的加法和减法（一）", lessons: ["第1课·两位数加减两位数口算", "第2课·几百几十加减几百几十", "第3课·估算解决问题"] },
+                        { unit: "第三单元·测量", lessons: ["第1课·毫米、分米的认识", "第2课·千米的认识", "第3课·吨的认识与方案选择"] },
+                        { unit: "第四单元·万以内的加法和减法（二）", lessons: ["第1课·三位数加三位数（进位）", "第2课·三位数减三位数（退位）", "第3课·验算与综合应用"] },
+                        { unit: "第五单元·倍的认识", lessons: ["第1课·倍的认识", "第2课·求一个数是另一个数的几倍", "第3课·求一个数的几倍是多少"] },
+                        { unit: "第六单元·多位数乘一位数", lessons: ["第1课·口算乘法", "第2课·笔算乘法（不进位与进位）", "第3课·因数中间或末尾有0的乘法", "第4课·归一与归总问题"] },
+                        { unit: "第七单元·长方形和正方形", lessons: ["第1课·四边形的认识", "第2课·周长的认识", "第3课·长方形和正方形的周长"] },
+                        { unit: "第八单元·分数的初步认识", lessons: ["第1课·几分之一与几分之几", "第2课·分数的简单计算", "第3课·分数的简单应用"] },
+                        { unit: "第九单元·数学广角——集合", lessons: ["第1课·集合重叠问题", "期末全册总复习"] }
+                    ],
+                    "语文": [
+                        { unit: "第一单元·学校生活与新鲜感", lessons: ["1. 大青树下的小学", "2. 花的学校", "3. 不懂就要问"] },
+                        { unit: "第二单元·金秋时节", lessons: ["4. 古诗三首（山行/赠刘景文/夜书所见）", "5. 铺满金色巴掌的水泥道", "6. 秋天的雨", "7. 听听，秋的声音"] },
+                        { unit: "第三单元·童话世界", lessons: ["8. 卖火柴的小女孩", "9. 那一定会很好", "10. 在牛肚子里旅行", "11. 一块奶酪"] },
+                        { unit: "第四单元·预测与推理", lessons: ["12. 总也倒不了的老屋", "13. 胡萝卜先生的长胡子", "14. 小狗学叫"] },
+                        { unit: "第五单元·留心观察", lessons: ["15. 搭船的鸟", "16. 金色的草地"] },
+                        { unit: "第六单元·祖国山河", lessons: ["17. 古诗三首（望天门山/饮湖上初晴后雨/望洞庭）", "18. 富饶的西沙群岛", "19. 海滨小城", "20. 美丽的小兴安岭"] },
+                        { unit: "第七单元·大自然的声音", lessons: ["21. 大自然的声音", "22. 父亲、树林和鸟", "23. 带刺的朋友"] },
+                        { unit: "第八单元·美好品质", lessons: ["24. 司马光", "25. 掌声", "26. 灰雀", "27. 手术台就是阵地"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · Hello! & Making Friends", lessons: ["Part A·Greetings & Names", "Part B·School things / Body parts", "Part C·Story & Revision"] },
+                        { unit: "Unit 2 · Colours & Different Families", lessons: ["Part A·Colours & Family words", "Part B·This is my... / Nice to meet you", "Part C·Story & Revision"] },
+                        { unit: "Unit 3 · Look at me! & Amazing Animals", lessons: ["Part A·Pets & Wild animals", "Part B·What's this/that? It's a...", "Part C·Story & Revision"] },
+                        { unit: "Unit 4 · We love animals & Plants Around Us", lessons: ["Part A·Fruit & Plants", "Part B·Do you like...? Yes, I do.", "Part C·Story & Revision"] },
+                        { unit: "Unit 5 · Let's eat! & The Colourful World", lessons: ["Part A·Colours in nature", "Part B·What colour is it?", "Part C·Story & Revision"] },
+                        { unit: "Unit 6 · Happy birthday! & Useful Numbers", lessons: ["Part A·Numbers 1-10", "Part B·How old are you? / How many?", "Part C·Full Term Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·水", lessons: ["1. 水到哪里去了（蒸发）", "2. 水沸腾了", "3. 水结冰了", "4. 冰融化了", "5. 水能溶解多少物质", "6. 加快溶解", "7. 混合与分离", "8. 它们发生了什么变化"] },
+                        { unit: "第二单元·空气", lessons: ["1. 感受空气", "2. 空气能占据空间吗", "3. 压缩空气", "4. 空气有质量吗", "5. 一袋空气的质量是多少", "6. 我们来做“热气球”", "7. 风的成因", "8. 空气和我们的生活"] },
+                        { unit: "第三单元·天气", lessons: ["1. 我们关心天气", "2. 认识气温计", "3. 测量气温", "4. 测量降水量", "5. 观测风", "6. 观察云", "7. 整理我们的天气日历", "8. 天气预报是怎样制作出来的"] }
+                    ]
+                },
+                "下册": {
+                    "数学": [
+                        { unit: "第一单元·位置与方向（一）", lessons: ["第1课·认识东、南、西、北", "第2课·认识东北、东南、西北、西南"] },
+                        { unit: "第二单元·除数是一位数的除法", lessons: ["第1课·口算除法", "第2课·笔算除法（两位数、三位数除以一位数）", "第3课·商中间或末尾有0的除法"] },
+                        { unit: "第三单元·复式统计表", lessons: ["第1课·复式统计表的认识与分析", "单元综合整理"] },
+                        { unit: "第四单元·两位数乘两位数", lessons: ["第1课·口算乘法", "第2课·笔算乘法（不进位与进位）", "第3课·连乘连除解决问题"] },
+                        { unit: "第五单元·面积", lessons: ["第1课·面积和面积单位", "第2课·长方形、正方形面积的计算", "第3课·面积单位间的进率"] },
+                        { unit: "第六单元·年、月、日", lessons: ["第1课·认识年、月、日与平年闰年", "第2课·24时计时法"] },
+                        { unit: "第七单元·小数的初步认识", lessons: ["第1课·认识小数与大小比较", "第2课·简单的小数加、减法"] },
+                        { unit: "第八单元·数学广角——搭配（二）", lessons: ["第1课·稍复杂的排列与组合", "期末全册总复习"] }
+                    ],
+                    "语文": [
+                        { unit: "第一单元·可爱的生灵", lessons: ["1. 古诗三首（绝句/惠崇春江晚景/三衢道中）", "2. 燕子", "3. 荷花", "4. 昆虫备忘录"] },
+                        { unit: "第二单元·寓言故事", lessons: ["5. 守株待兔", "6. 陶罐和铁罐", "7. 鹿角和鹿腿", "8. 池子与河流"] },
+                        { unit: "第三单元·中华优秀传统文化", lessons: ["9. 古诗三首（元日/清明/九月九日忆山东兄弟）", "10. 纸的发明", "11. 赵州桥", "12. 一幅名扬中外的画"] },
+                        { unit: "第四单元·观察与发现", lessons: ["13. 花钟", "14. 蜜蜂", "15. 小虾"] },
+                        { unit: "第五单元·大胆想象", lessons: ["16. 宇宙的另一边", "17. 我变成了一棵树"] },
+                        { unit: "第六单元·多彩童年", lessons: ["18. 童年的水墨画", "19. 剃头大师", "20. 肥皂泡", "21. 我不能失信"] },
+                        { unit: "第七单元·奇妙的世界", lessons: ["22. 我们奇妙的世界", "23. 海底世界", "24. 火烧云"] },
+                        { unit: "第八单元·有趣的故事", lessons: ["25. 慢性子裁缝和急性子顾客", "26. 方帽子店", "27. 漏", "28. 枣核"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · Welcome back to school!", lessons: ["Part A·Countries & Friends", "Part B·Where are you from?", "Part C·Review"] },
+                        { unit: "Unit 2 · My family", lessons: ["Part A·Father, mother, man, woman", "Part B·Who's that man/woman?", "Part C·Review"] },
+                        { unit: "Unit 3 · At the zoo", lessons: ["Part A·Thin, fat, tall, short", "Part B·Look at the giraffe! It's so tall.", "Part C·Review"] },
+                        { unit: "Unit 4 · Where is my car?", lessons: ["Part A·On, in, under", "Part B·Where is my cap?", "Part C·Review"] },
+                        { unit: "Unit 5 · Do you like pears?", lessons: ["Part A·Apple, pear, orange, banana", "Part B·Do you like...? Yes, I do.", "Part C·Review"] },
+                        { unit: "Unit 6 · How many?", lessons: ["Part A·Numbers 11-15", "Part B·Numbers 16-20 & How many... do you see?", "Part C·Full Term Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·物体的运动", lessons: ["1. 运动和位置", "2. 各种各样的运动", "3. 直线运动和曲线运动", "4. 物体在斜面上运动", "5. 比较相同距离内运动的快慢", "6. 比较相同时间内运动的快慢", "7. 我们的“过山车”"] },
+                        { unit: "第二单元·动物的一生", lessons: ["1. 迎接蚕宝宝的到来", "2. 认识其他动物的卵", "3. 蚕长大了", "4. 蚕变了新模样", "5. 茧中钻出了蚕蛾", "6. 蚕的一生", "7. 动物的繁殖"] },
+                        { unit: "第三单元·太阳、地球和月球", lessons: ["1. 仰望天空", "2. 阳光下物体的影子", "3. 影子的秘密", "4. 月相变化的规律", "5. 月球——地球的卫星", "6. 地球的形状", "7. 地球——水的星球"] }
+                    ]
+                }
+            },
+            "小学四年级": {
+                "上册": {
+                    "数学": [
+                        { unit: "第一单元·大数的认识", lessons: ["第1课·亿以内数的认识与读写", "第2课·数的大小比较与改写求近似数", "第3课·亿以上数的认识"] },
+                        { unit: "第二单元·公顷和平方千米", lessons: ["第1课·认识公顷和平方千米", "单元综合整理"] },
+                        { unit: "第三单元·角的度量", lessons: ["第1课·线段、直线、射线和角", "第2课·角的度量与分类", "第3课·画角"] },
+                        { unit: "第四单元·三位数乘两位数", lessons: ["第1课·三位数乘两位数笔算", "第2课·积的变化规律", "第3课·单价数量总价与速度时间路程"] },
+                        { unit: "第五单元·平行四边形和梯形", lessons: ["第1课·平行与垂直", "第2课·平行四边形和梯形的认识"] },
+                        { unit: "第六单元·除数是两位数的除法", lessons: ["第1课·口算除法", "第2课·笔算除法与试商调商", "第3课·商的变化规律"] },
+                        { unit: "第七、八单元·条形统计图与优化", lessons: ["第1课·条形统计图", "第2课·数学广角——优化（沏茶/烙饼问题）"] }
+                    ],
+                    "语文": [
+                        { unit: "第一单元·自然奇观", lessons: ["1. 观潮", "2. 走月亮", "3. 现代诗二首", "4. 繁星"] },
+                        { unit: "第二单元·提问策略", lessons: ["5. 一个豆荚里的五粒豆", "6. 夜间飞行的秘密", "7. 呼风唤雨的世纪", "8. 蝴蝶的家"] },
+                        { unit: "第三单元·连续观察", lessons: ["9. 古诗三首（暮江吟/题西林壁/雪梅）", "10. 爬山虎的脚", "11. 蟋蟀的住宅"] },
+                        { unit: "第四单元·神话故事", lessons: ["12. 盘古开天地", "13. 精卫填海", "14. 普罗米修斯", "15. 女娲补天"] },
+                        { unit: "第五、六单元·把事情写清楚与成长故事", lessons: ["16. 麻雀 / 17. 爬天都峰", "18. 牛和鹅 / 19. 一只窝囊的大老虎 / 20. 陀螺"] },
+                        { unit: "第七、八单元·家国情怀与历史故事", lessons: ["21. 古诗三首 / 22. 为中华之崛起而读书", "25. 王戎不取道旁李 / 26. 西门豹治邺"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · My classroom", lessons: ["Part A·Classroom objects", "Part B·Let's clean the classroom", "Part C·Review"] },
+                        { unit: "Unit 2 · My schoolbag", lessons: ["Part A·Books & Schoolbag", "Part B·What's in your schoolbag?", "Part C·Review"] },
+                        { unit: "Unit 3 · My friends", lessons: ["Part A·Strong, friendly, quiet", "Part B·He has glasses and his shoes are blue", "Part C·Review"] },
+                        { unit: "Unit 4 · My home", lessons: ["Part A·Bedroom, living room, kitchen", "Part B·Are they on the table?", "Part C·Review"] },
+                        { unit: "Unit 5 · Dinner's ready", lessons: ["Part A·Beef, chicken, noodles, soup", "Part B·What would you like?", "Part C·Review"] },
+                        { unit: "Unit 6 · Meet my family!", lessons: ["Part A·Parents, uncle, aunt, cousin", "Part B·What's your father's job?", "Part C·Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·声音", lessons: ["1. 听听声音", "2. 声音是怎样产生的", "3. 声音是怎样传播的", "4. 我们是怎样听到声音的", "5. 声音的强与弱", "6. 声音的高与低", "7. 让弦发出高低不同的声音"] },
+                        { unit: "第二单元·呼吸与消化", lessons: ["1. 感受我们的呼吸", "2. 呼吸与健康生活", "3. 测量肺活量", "4. 一天的食物", "5. 食物中的营养", "6. 营养要均衡", "7. 食物在口腔里的变化", "8. 食物在身体里的旅行"] },
+                        { unit: "第三单元·运动和力", lessons: ["1. 让小车运动起来", "2. 用气球驱动小车", "3. 用橡皮筋驱动小车", "4. 弹簧测力计", "5. 运动与摩擦力", "6. 运动的小车"] }
+                    ]
+                },
+                "下册": {
+                    "数学": [
+                        { unit: "第一单元·四则运算", lessons: ["第1课·加减乘除法的意义和各部分关系", "第2课·括号与租船最省钱问题"] },
+                        { unit: "第二单元·观察物体（二）", lessons: ["第1课·从前面、上面、左面观察立体图形", "单元综合整理"] },
+                        { unit: "第三单元·运算律", lessons: ["第1课·加法交换律与结合律", "第2课·乘法交换律、结合律与分配律", "第3课·简便计算综合应用"] },
+                        { unit: "第四单元·小数的意义和性质", lessons: ["第1课·小数的意义和读写法", "第2课·小数的性质和大小比较", "第3课·小数点移动引起小数大小的变化", "第4课·小数与单位换算及近似数"] },
+                        { unit: "第五单元·三角形", lessons: ["第1课·三角形的特性与三边关系", "第2课·三角形的分类", "第3课·三角形的内角和"] },
+                        { unit: "第六单元·小数的加法和减法", lessons: ["第1课·小数加减法", "第2课·小数加减混合运算与简便计算"] },
+                        { unit: "第七至九单元·图形运动、平均数与鸡兔同笼", lessons: ["第1课·轴对称与平移", "第2课·平均数与复式条形统计图", "第3课·数学广角——鸡兔同笼"] }
+                    ],
+                    "语文": [
+                        { unit: "第一单元·乡村生活", lessons: ["1. 古诗词三首（四时田园杂兴/宿新市徐公店/清平乐·村居）", "2. 乡下人家", "3. 天窗", "4. 三月桃花水"] },
+                        { unit: "第二单元·科普与科技", lessons: ["5. 琥珀", "6. 飞向蓝天的恐龙", "7. 纳米技术就在我们身边", "8. 千年梦圆在今朝"] },
+                        { unit: "第三、四单元·现代诗与动物朋友", lessons: ["9. 短诗三首 / 10. 绿 / 11. 白桦", "13. 猫 / 14. 母鸡 / 15. 白鹅"] },
+                        { unit: "第五、六单元·游记与成长故事", lessons: ["16. 海上日出 / 17. 记金华的双龙洞", "18. 文言文二则（囊萤夜读/铁杵成针） / 19. 小英雄雨来"] },
+                        { unit: "第七、八单元·人物品质与童话", lessons: ["22. 古诗三首 / 23. “诺曼底号”遇难记", "26. 宝葫芦的秘密 / 27. 巨人的花园 / 28. 海的女儿"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · My school", lessons: ["Part A·Teachers' office, library", "Part B·Do you have a library?", "Part C·Review"] },
+                        { unit: "Unit 2 · What time is it?", lessons: ["Part A·Breakfast, lunch, dinner, English class", "Part B·It's time to / for...", "Part C·Review"] },
+                        { unit: "Unit 3 · Weather", lessons: ["Part A·Cold, cool, warm, hot", "Part B·What's the weather like in Beijing?", "Part C·Review"] },
+                        { unit: "Unit 4 · At the farm", lessons: ["Part A·Tomatoes, potatoes, carrots", "Part B·Horses, cows, sheep, hens", "Part C·Review"] },
+                        { unit: "Unit 5 · My clothes", lessons: ["Part A·Clothes, hat, skirt, pants", "Part B·Whose coat is this?", "Part C·Review"] },
+                        { unit: "Unit 6 · Shopping", lessons: ["Part A·Gloves, scarf, umbrella, sunglasses", "Part B·How much is this skirt?", "Part C·Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·植物的生长变化", lessons: ["1. 种子里孕育着新生命", "2. 种植凤仙花", "3. 种子长出了根", "4. 茎和叶", "5. 凤仙花开花了", "6. 果实和种子", "7. 种子的传播"] },
+                        { unit: "第二单元·电路", lessons: ["1. 电和我们的生活", "2. 点亮小灯泡", "3. 简易电路", "4. 电路出故障了", "5. 里面是怎样连接的", "6. 导体和绝缘体", "7. 电路中的开关"] },
+                        { unit: "第三单元·岩石与土壤", lessons: ["1. 岩石与土壤的故事", "2. 认识几种常见的岩石", "3. 岩石的组成", "4. 制作岩石和矿物标本", "5. 岩石、沙和黏土", "6. 观察土壤", "7. 比较不同的土壤"] }
+                    ]
+                }
+            },
+            "小学五年级": {
+                "上册": {
+                    "数学": [
+                        { unit: "第一单元·小数乘法", lessons: ["第1课·小数乘整数与小数乘小数", "第2课·积的近似数与整数乘法运算律推广", "第3课·分段计费解决问题"] },
+                        { unit: "第二单元·位置", lessons: ["第1课·用数对表示位置", "单元综合整理"] },
+                        { unit: "第三单元·小数除法", lessons: ["第1课·除数是整数与一个数除以小数", "第2课·商的近似数与循环小数", "第3课·进一法与去尾法解决问题"] },
+                        { unit: "第四单元·可能性", lessons: ["第1课·事件发生的确定性与可能性大小", "单元综合整理"] },
+                        { unit: "第五单元·简易方程", lessons: ["第1课·用字母表示数", "第2课·方程的意义与等式的性质", "第3课·解简易方程", "第4课·实际问题与方程"] },
+                        { unit: "第六单元·多边形的面积", lessons: ["第1课·平行四边形的面积", "第2课·三角形的面积", "第3课·梯形的面积与组合图形面积"] },
+                        { unit: "第七单元·数学广角——植树问题", lessons: ["第1课·两端都栽、一端栽与封闭图形植树问题", "期末全册总复习"] }
+                    ],
+                    "语文": [
+                        { unit: "第一、二单元·万物有灵与提高阅读速度", lessons: ["1. 白鹭 / 2. 落花生 / 3. 桂花雨", "5. 搭石 / 6. 将相和 / 7. 什么比猎豹的速度更快"] },
+                        { unit: "第三、四单元·民间故事与家国之殇", lessons: ["9. 猎人海力布 / 10. 牛郎织女", "12. 古诗三首（示儿/题临安邸/己亥杂诗） / 13. 少年中国说 / 14. 圆明园的毁灭"] },
+                        { unit: "第五、六单元·说明文与舐犊情深", lessons: ["16. 太阳 / 17. 松鼠", "18. 慈母情深 / 19. 父爱之舟"] },
+                        { unit: "第七、八单元·四时景物与读书明智", lessons: ["21. 古诗词三首 / 22. 四季之美 / 23. 鸟的天堂", "25. 古人谈读书 / 26. 忆读书"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · What's he like?", lessons: ["Part A·Old, young, funny, kind, strict", "Part B·Polite, hard-working, helpful, clever", "Part C·Review"] },
+                        { unit: "Unit 2 · My week", lessons: ["Part A·Days of the week", "Part B·Wash clothes, watch TV, do homework", "Part C·Review"] },
+                        { unit: "Unit 3 · What would you like?", lessons: ["Part A·Sandwich, salad, hamburger, ice cream", "Part B·Fresh, healthy, delicious, hot, sweet", "Part C·Review"] },
+                        { unit: "Unit 4 · What can you do?", lessons: ["Part A·Sing English songs, do kung fu", "Part B·Swim, speak English, cook", "Part C·Review"] },
+                        { unit: "Unit 5 · There is a big bed", lessons: ["Part A·Clock, plant, bottle, bike, photo", "Part B·In front of, between, above, beside", "Part C·Review"] },
+                        { unit: "Unit 6 · In a nature park", lessons: ["Part A·Forest, river, lake, mountain, hill", "Part B·Is there a...? Are there any...?", "Part C·Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·光", lessons: ["1. 有关光的思考", "2. 光是怎样传播的", "3. 光的传播会遇到阻碍吗", "4. 光的传播方向会发生改变吗", "5. 认识棱镜", "6. 光的反射现象", "7. 制作一个潜望镜"] },
+                        { unit: "第二单元·地球表面的变化", lessons: ["1. 地球的表面", "2. 地球的结构", "3. 地震的成因及作用", "4. 火山喷发的成因及作用", "5. 风的作用", "6. 水的作用"] },
+                        { unit: "第三单元·计量时间", lessons: ["1. 时间在流逝", "2. 用水计量时间", "3. 我们的水钟", "4. 机械摆钟", "5. 摆的快慢"] }
+                    ]
+                },
+                "下册": {
+                    "数学": [
+                        { unit: "第一、二单元·观察物体（三）与因数和倍数", lessons: ["第1课·因数和倍数", "第2课·2、5、3的倍数的特征", "第3课·质数和合数"] },
+                        { unit: "第三单元·长方体和正方体", lessons: ["第1课·长方体和正方体的认识", "第2课·表面积的计算", "第3课·体积和体积单位及容积"] },
+                        { unit: "第四单元·分数的意义和性质", lessons: ["第1课·分数的意义与分数与除法", "第2课·真分数和假分数", "第3课·分数的基本性质与约分、通分", "第4课·分数和小数的互化"] },
+                        { unit: "第五、六单元·图形的运动（三）与分数加减法", lessons: ["第1课·图形的旋转", "第2课·同分母与异分母分数加、减法", "第3课·分数加减混合运算"] },
+                        { unit: "第七、八单元·折线统计图与找次品", lessons: ["第1课·单式与复式折线统计图", "第2课·数学广角——找次品"] }
+                    ],
+                    "语文": [
+                        { unit: "第一、二单元·童年往事与古典名著之旅", lessons: ["1. 古诗三首 / 2. 祖父的园子", "5. 草船借箭 / 6. 景阳冈 / 7. 猴王出世 / 8. 红楼春趣"] },
+                        { unit: "第三、四单元·遨游汉字王国与家国责任", lessons: ["综合性学习·汉字真有趣", "9. 古诗三首 / 10. 青山处处埋忠骨 / 11. 军神"] },
+                        { unit: "第五、六单元·描写人物与思维火花", lessons: ["13. 人物描写一组 / 14. 刷子李", "15. 自相矛盾 / 16. 田忌赛马 / 17. 跳水"] },
+                        { unit: "第七、八单元·世界各地与风趣幽默", lessons: ["18. 威尼斯的小艇 / 19. 牧场之国 / 20. 金字塔", "21. 杨氏之子 / 22. 手指"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · My day", lessons: ["Part A·Eat breakfast, have...class, play sports", "Part B·Clean my room, go for a walk, go shopping", "Part C·Review"] },
+                        { unit: "Unit 2 · My favourite season", lessons: ["Part A·Spring, summer, autumn, winter", "Part B·Go on a picnic, go swimming, pick apples", "Part C·Review"] },
+                        { unit: "Unit 3 · My school calendar", lessons: ["Part A·January to June", "Part B·July to December", "Part C·Review"] },
+                        { unit: "Unit 4 · When is the art show?", lessons: ["Part A·First, second, third, fourth, fifth", "Part B·Twelfth, twentieth, twenty-first...", "Part C·Review"] },
+                        { unit: "Unit 5 · Whose dog is it?", lessons: ["Part A·Mine, yours, his, hers, theirs, ours", "Part B·Climbing, eating, playing, jumping", "Part C·Review"] },
+                        { unit: "Unit 6 · Work quietly!", lessons: ["Part A·Doing morning exercises, having...class", "Part B·Talk quietly! Keep your desk clean!", "Part C·Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·生物与环境", lessons: ["1. 种子发芽实验", "2. 比较种子发芽实验", "3. 绿豆苗的生长", "4. 蚯蚓的选择", "5. 当环境改变了", "6. 食物链和食物网", "7. 设计和制作生态瓶"] },
+                        { unit: "第二单元·船的研究", lessons: ["1. 船的历史", "2. 用浮的材料造船", "3. 用沉的材料造船", "4. 增加船的载重量", "5. 给船装上动力"] },
+                        { unit: "第三单元·环境与我们", lessons: ["1. 地球——宇宙的奇迹", "2. 我们面临的环境问题", "3. 珍惜水资源", "4. 解决垃圾问题", "5. 合理利用能源"] }
+                    ]
+                }
+            },
+            "小学六年级": {
+                "上册": {
+                    "数学": [
+                        { unit: "第一单元·分数乘法", lessons: ["第1课·分数乘整数与分数乘分数", "第2课·分数混合运算与简便计算", "第3课·连续求一个数的几分之几是多少"] },
+                        { unit: "第二单元·位置与方向（二）", lessons: ["第1课·根据方向和距离确定位置", "单元综合整理"] },
+                        { unit: "第三单元·分数除法", lessons: ["第1课·倒数的认识", "第2课·分数除法的计算", "第3课·已知一个数的几分之几是多少求这个数", "第4课·工程问题"] },
+                        { unit: "第四单元·比", lessons: ["第1课·比的意义和基本性质", "第2课·按比分配解决问题"] },
+                        { unit: "第五单元·圆", lessons: ["第1课·圆的认识", "第2课·圆的周长", "第3课·圆的面积与圆环面积", "第4课·扇形的认识"] },
+                        { unit: "第六单元·百分数（一）", lessons: ["第1课·百分数的意义和读写法", "第2课·百分数与小数、分数的互化", "第3课·用百分数解决问题（增减幅度）"] },
+                        { unit: "第七、八单元·扇形统计图与数与形", lessons: ["第1课·扇形统计图", "第2课·数学广角——数与形"] }
+                    ],
+                    "语文": [
+                        { unit: "第一、二单元·触摸自然与革命岁月", lessons: ["1. 草原 / 2. 丁香结 / 3. 古诗词三首", "5. 七律·长征 / 6. 狼牙山五壮士 / 7. 开国大典"] },
+                        { unit: "第三、四单元·有目的地阅读与小说", lessons: ["9. 竹节人 / 10. 宇宙生命之谜", "12. 桥 / 13. 穷人"] },
+                        { unit: "第五、六单元·围绕中心意思写与保护环境", lessons: ["15. 夏天里的成长 / 16. 盼", "17. 古诗三首 / 18. 只有一个地球 / 19. 青山不老"] },
+                        { unit: "第七、八单元·艺术之美与走近鲁迅", lessons: ["21. 文言文二则（伯牙鼓琴/书戴嵩画牛） / 22. 月光曲", "24. 少年闰土 / 25. 好的故事"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · How can I get there?", lessons: ["Part A·Science museum, post office, bookstore, cinema, hospital", "Part B·Turn left, turn right, go straight", "Part C·Review"] },
+                        { unit: "Unit 2 · Ways to go to school", lessons: ["Part A·On foot, by bus, by plane, by taxi, by subway", "Part B·Slow down and stop! Stop and wait!", "Part C·Review"] },
+                        { unit: "Unit 3 · My weekend plan", lessons: ["Part A·Visit my grandparents, see a film, take a trip", "Part B·Dictionary, comic book, word book, postcard", "Part C·Review"] },
+                        { unit: "Unit 4 · I have a pen pal", lessons: ["Part A·Dancing, singing, reading stories, playing football", "Part B·Cooks Chinese food, studies Chinese, does word puzzles", "Part C·Review"] },
+                        { unit: "Unit 5 · What does he do?", lessons: ["Part A·Factory worker, postman, businessman, police officer", "Part B·Fisherman, scientist, pilot, coach", "Part C·Review"] },
+                        { unit: "Unit 6 · How do you feel?", lessons: ["Part A·Angry, afraid, sad, worried, happy", "Part B·See a doctor, do more exercise, wear warm clothes", "Part C·Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·微小世界", lessons: ["1. 放大镜", "2. 怎样放得更大", "3. 观察身边微小的物体", "4. 观察洋葱表皮细胞", "5. 观察更多的生物细胞", "6. 观察水中微小的生物", "7. 微生物与健康"] },
+                        { unit: "第二单元·地球的运动", lessons: ["1. 我们的地球模型", "2. 昼夜交替现象", "3. 人类认识地球运动的历史", "4. 谁先迎来黎明", "5. 影长的四季变化", "6. 地球的公转与四季变化"] },
+                        { unit: "第三单元·工具与技术", lessons: ["1. 紧密联系的工具和技术", "2. 斜面", "3. 不简单的杠杆", "4. 改变运输的车轮", "5. 灵活巧妙的剪刀", "6. 推动社会发展的印刷术"] }
+                    ]
+                },
+                "下册": {
+                    "数学": [
+                        { unit: "第一单元·负数", lessons: ["第1课·负数的初步认识与在直线上表示数", "单元综合整理"] },
+                        { unit: "第二单元·百分数（二）", lessons: ["第1课·折扣与成数", "第2课·税率与利率", "第3课·购物策略解决问题"] },
+                        { unit: "第三单元·圆柱与圆锥", lessons: ["第1课·圆柱的认识与表面积", "第2课·圆柱的体积", "第3课·圆锥的认识与体积"] },
+                        { unit: "第四单元·比例", lessons: ["第1课·比例的意义和基本性质", "第2课·正比例和反比例", "第3课·比例尺与图形的放大与缩小", "第4课·用比例解决问题"] },
+                        { unit: "第五、六单元·鸽巢问题与小升初总复习", lessons: ["第1课·数学广角——鸽巢问题", "第2课·数与代数总复习", "第3课·图形与几何、统计与概率总复习"] }
+                    ],
+                    "语文": [
+                        { unit: "第一、二单元·民风民俗与外国文学名著", lessons: ["1. 北京的春节 / 2. 腊八粥 / 3. 古诗三首", "5. 鲁滨逊漂流记 / 6. 骑鹅旅行记"] },
+                        { unit: "第三、四单元·真情流露与理想信念", lessons: ["8. 匆匆 / 9. 那个星期天", "10. 古诗三首 / 11. 十六年前的回忆 / 12. 为人民服务"] },
+                        { unit: "第五、六单元·科学精神与难忘小学生活", lessons: ["14. 文言文二则（学弈/两小儿辩日） / 15. 真理诞生于一百个问号之后 / 16. 表里的生物", "综合性学习·难忘小学生活"] }
+                    ],
+                    "英语": [
+                        { unit: "Unit 1 · How tall are you?", lessons: ["Part A·Younger, older, taller, shorter, longer", "Part B·Thinner, heavier, bigger, smaller, stronger", "Part C·Review"] },
+                        { unit: "Unit 2 · Last weekend", lessons: ["Part A·Cleaned my room, washed my clothes, stayed at home", "Part B·Read a book, saw a film, had a cold, slept", "Part C·Review"] },
+                        { unit: "Unit 3 · Where did you go?", lessons: ["Part A·Went camping, went fishing, rode a horse", "Part B·Ate fresh food, went swimming, took pictures", "Part C·Review"] },
+                        { unit: "Unit 4 · Then and now", lessons: ["Part A·Dining hall, grass, gym, ago", "Part B·Go cycling, ice-skate, play badminton", "Part C·Primary School Graduation Review"] }
+                    ],
+                    "科学": [
+                        { unit: "第一单元·小小工程师", lessons: ["1. 了解我们的住房", "2. 认识工程", "3. 建造塔台", "4. 设计塔台模型", "5. 制作塔台模型", "6. 测试塔台模型", "7. 评估改进塔台模型"] },
+                        { unit: "第二单元·生物的多样性", lessons: ["1. 校园生物大搜索", "2. 制作校园生物分布图", "3. 形形色色的植物", "4. 多种多样的动物", "5. 相貌各异的我们", "6. 古代生物的多样性", "7. 保护生物多样性"] },
+                        { unit: "第三单元·宇宙", lessons: ["1. 太阳系大家庭", "2. 八颗行星", "3. 日食", "4. 认识星座", "5. 夏季星空", "6. 浩瀚的宇宙"] }
+                    ]
+                }
+            }
+        };
+
+        // ==================== 3. 独立状态管理系统 ====================
         const STORAGE_KEYS = {
             API_KEY: "ro_api_key",
             BASE_URL: "ro_base_url",
             MODEL: "ro_model",
             IMAGE_MODEL: "ro_image_model",
-            DAILY_STATE: "cc_daily_state_v2",
-            SNAKE_STATE: "cc_snake_state_v2",
-            STORY_STATE: "cc_story_state_v2",
-            LEARNER_PROFILE: "cc_learner_profile_v2",
-            BASE_CHAT: "cc_base_chat_v2",
-            INTEREST_CHAT: "cc_interest_chat_v2"
+            DAILY_STATE: "cc_daily_state_v3",
+            SNAKE_STATE: "cc_snake_state_v3",
+            STORY_STATE: "cc_story_state_v3",
+            LEARNER_PROFILE: "cc_learner_profile_v3",
+            BASE_CHAT: "cc_base_chat_v3",
+            INTEREST_CHAT: "cc_interest_chat_v3"
         };
 
         const SUBJECT_NODES = [
@@ -432,11 +1097,18 @@
         let learnerProfile = {
             age: 9,
             grade: "小学三年级",
+            term: "上册",
+            curriculumSelection: {
+                "数学": { unitIdx: 3, lessonIdx: 0, note: "" },
+                "语文": { unitIdx: 2, lessonIdx: 0, note: "" },
+                "英语": { unitIdx: 0, lessonIdx: 0, note: "" },
+                "科学": { unitIdx: 0, lessonIdx: 0, note: "" }
+            },
             subjectProgress: {
-                "数学": "三上·万以内加减法、倍的认识、长方形和正方形周长",
-                "语文": "三上·童话想象单元、观察日记、积累好词好句与阅读理解",
-                "英语": "三上·日常问候、颜色文具、家庭与动物词汇及简单问答",
-                "科学": "三上·水的三态变化、空气的性质、常见动植物与天气观察"
+                "数学": "小学三年级上册 · 第四单元·万以内的加法和减法（二） · 第1课·三位数加三位数（进位）",
+                "语文": "小学三年级上册 · 第三单元·童话世界 · 8. 卖火柴的小女孩",
+                "英语": "小学三年级上册 · Unit 1 · Hello! & Making Friends · Part A·Greetings & Names",
+                "科学": "小学三年级上册 · 第一单元·水 · 1. 水到哪里去了（蒸发）"
             },
             adaptiveLevel: 1,
             exploredInterests: []
@@ -463,16 +1135,43 @@
             return SUBJECT_NODES[count - 1].t;
         }
 
+        function updateModelStatusUI() {
+            const savedKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || "";
+            const savedModel = localStorage.getItem(STORAGE_KEYS.MODEL) || "openai/gpt-5.6-luna";
+            const savedImgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || "";
+            const dot = document.getElementById("modelStatusDot");
+            const label = document.getElementById("modelShortLabel");
+            const aiPaintBtn = document.getElementById("aiHeroPaintBtn");
+
+            if (savedKey) {
+                dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                dot.title = "密钥已配置";
+                const shortName = savedModel.includes("/") ? savedModel.split("/")[1] : savedModel;
+                label.innerText = shortName;
+            } else {
+                dot.className = "w-2 h-2 rounded-full bg-rose-400 animate-pulse";
+                dot.title = "请先填写 API 密钥";
+                label.innerText = "待填密钥";
+            }
+
+            if (savedKey && savedImgModel) {
+                aiPaintBtn.classList.remove("hidden");
+            } else {
+                aiPaintBtn.classList.add("hidden");
+            }
+        }
+
         function loadAllStates() {
             const savedKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || "";
             const savedBase = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
-            const savedModel = localStorage.getItem(STORAGE_KEYS.MODEL) || "google/gemini-3-flash";
+            const savedModel = localStorage.getItem(STORAGE_KEYS.MODEL) || "openai/gpt-5.6-luna";
             const savedImgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || "";
 
             if (savedKey) document.getElementById("apiKeyInput").value = "********";
             document.getElementById("baseUrlInput").value = savedBase;
             document.getElementById("modelInput").value = savedModel;
             document.getElementById("imageModelInput").value = savedImgModel;
+            updateModelStatusUI();
 
             try {
                 const sSnake = JSON.parse(localStorage.getItem(STORAGE_KEYS.SNAKE_STATE));
@@ -497,6 +1196,7 @@
                     learnerProfile = {
                         ...learnerProfile,
                         ...sProfile,
+                        curriculumSelection: { ...learnerProfile.curriculumSelection, ...(sProfile.curriculumSelection || {}) },
                         subjectProgress: { ...learnerProfile.subjectProgress, ...(sProfile.subjectProgress || {}) },
                         exploredInterests: Array.isArray(sProfile.exploredInterests) ? sProfile.exploredInterests : []
                     };
@@ -568,10 +1268,23 @@
             localStorage.setItem(STORAGE_KEYS.INTEREST_CHAT, JSON.stringify(interestChatHistory.slice(-28)));
         }
 
-        function toggleSettingsPanel() {
-            const bar = document.getElementById("settingsBar");
-            bar.classList.toggle("hidden");
-            bar.classList.toggle("flex");
+        // ==================== 4. 模型设置独立弹窗逻辑 ====================
+        function openModelModal() {
+            const savedKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || "";
+            document.getElementById("baseUrlInput").value = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
+            document.getElementById("modelInput").value = localStorage.getItem(STORAGE_KEYS.MODEL) || "openai/gpt-5.6-luna";
+            document.getElementById("imageModelInput").value = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || "";
+            document.getElementById("apiKeyInput").value = savedKey ? "********" : "";
+            document.getElementById("modelSaveFeedback").classList.add("hidden");
+            document.getElementById("modelModal").classList.remove("hidden");
+        }
+
+        function closeModelModal() {
+            document.getElementById("modelModal").classList.add("hidden");
+        }
+
+        function fillQuickModel(modelId) {
+            document.getElementById("modelInput").value = modelId;
         }
 
         function saveApiConfig() {
@@ -589,22 +1302,119 @@
             localStorage.setItem(STORAGE_KEYS.IMAGE_MODEL, imgModelVal);
 
             const currentKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
-            if (currentKey) {
-                updateSnakeUI("discovery", "模型配置已保存！贪吃蛇尼克和布谷老师都准备好啦！");
-            } else {
+            if (!currentKey) {
                 alert("请输入有效的 API Key (sk-...)！");
+                return;
+            }
+
+            updateModelStatusUI();
+            const fb = document.getElementById("modelSaveFeedback");
+            fb.innerText = `✅ 模型配置已保存！当前使用：${localStorage.getItem(STORAGE_KEYS.MODEL)}`;
+            fb.classList.remove("hidden");
+            updateSnakeUI("discovery", `模型已切换为【${localStorage.getItem(STORAGE_KEYS.MODEL)}】，布谷老师和贪吃蛇尼克都准备好啦！`);
+
+            setTimeout(() => {
+                closeModelModal();
+            }, 750);
+        }
+
+        // ==================== 5. 家长后台：课本进度级联选择 + Lv.1~Lv.10 难度说明与同步反馈 ====================
+        function initDifficultySelectOptions(selectedLv) {
+            const sel = document.getElementById("parentLevelSelect");
+            sel.innerHTML = "";
+            DIFFICULTY_LEVELS.forEach(item => {
+                const opt = document.createElement("option");
+                opt.value = item.lv;
+                opt.text = `${item.title} —— ${item.desc.slice(0, 18)}...`;
+                if (Number(selectedLv) === item.lv) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            updateLevelDescriptionPreview();
+        }
+
+        function updateLevelDescriptionPreview() {
+            const lv = parseInt(document.getElementById("parentLevelSelect").value, 10) || 1;
+            const info = DIFFICULTY_LEVELS.find(d => d.lv === lv) || DIFFICULTY_LEVELS[0];
+            document.getElementById("levelDetailBox").innerHTML = `
+                <div class="font-extrabold text-amber-900 mb-0.5">${info.title}</div>
+                <div class="text-gray-700">${info.desc}</div>
+            `;
+        }
+
+        function getUnitsForSubject(grade, term, subject) {
+            const gradeObj = CURRICULUM_DB[grade] || CURRICULUM_DB["小学三年级"];
+            const termObj = gradeObj[term] || gradeObj["上册"];
+            return termObj[subject] || [{ unit: "全册综合单元", lessons: ["基础与综合练习"] }];
+        }
+
+        function populateSubjectCascade(subject, unitIdx = 0, lessonIdx = 0) {
+            const grade = document.getElementById("parentGradeInput").value;
+            const term = document.getElementById("parentTermInput").value;
+            const units = getUnitsForSubject(grade, term, subject);
+
+            const uSel = document.getElementById(`unitSelect-${subject}`);
+            const lSel = document.getElementById(`lessonSelect-${subject}`);
+            uSel.innerHTML = "";
+
+            const safeUnitIdx = Math.min(Math.max(0, unitIdx), units.length - 1);
+            units.forEach((u, idx) => {
+                const opt = document.createElement("option");
+                opt.value = idx;
+                opt.text = u.unit;
+                if (idx === safeUnitIdx) opt.selected = true;
+                uSel.appendChild(opt);
+            });
+
+            const lessons = units[safeUnitIdx]?.lessons || ["本单元综合"];
+            const safeLessonIdx = Math.min(Math.max(0, lessonIdx), lessons.length - 1);
+            lSel.innerHTML = "";
+            lessons.forEach((ls, idx) => {
+                const opt = document.createElement("option");
+                opt.value = idx;
+                opt.text = ls;
+                if (idx === safeLessonIdx) opt.selected = true;
+                lSel.appendChild(opt);
+            });
+
+            updateSubjectPreviewTag(subject);
+        }
+
+        function onGradeOrTermChange() {
+            ["数学", "语文", "英语", "科学"].forEach(sub => {
+                populateSubjectCascade(sub, 0, 0);
+            });
+        }
+
+        function onSubjectUnitChange(subject) {
+            const uIdx = parseInt(document.getElementById(`unitSelect-${subject}`).value, 10) || 0;
+            populateSubjectCascade(subject, uIdx, 0);
+        }
+
+        function updateSubjectPreviewTag(subject) {
+            const uSel = document.getElementById(`unitSelect-${subject}`);
+            const lSel = document.getElementById(`lessonSelect-${subject}`);
+            const uText = uSel.options[uSel.selectedIndex]?.text || "";
+            const lText = lSel.options[lSel.selectedIndex]?.text || "";
+            const tag = document.getElementById(`previewTag-${subject}`);
+            if (tag) {
+                tag.innerText = `${uText.split("·")[0]} · ${lText}`;
             }
         }
 
-        // ==================== 3. 家长后台设置弹窗 ====================
         function openParentModal() {
             document.getElementById("parentAgeInput").value = learnerProfile.age || 9;
             document.getElementById("parentGradeInput").value = learnerProfile.grade || "小学三年级";
-            document.getElementById("progMathInput").value = learnerProfile.subjectProgress["数学"] || "";
-            document.getElementById("progChineseInput").value = learnerProfile.subjectProgress["语文"] || "";
-            document.getElementById("progEnglishInput").value = learnerProfile.subjectProgress["英语"] || "";
-            document.getElementById("progScienceInput").value = learnerProfile.subjectProgress["科学"] || "";
-            document.getElementById("parentLevelDisplay").innerText = learnerProfile.adaptiveLevel || 1;
+            document.getElementById("parentTermInput").value = learnerProfile.term || "上册";
+            document.getElementById("parentSaveFeedback").classList.add("hidden");
+
+            const selMap = learnerProfile.curriculumSelection || {};
+            ["数学", "语文", "英语", "科学"].forEach(sub => {
+                const saved = selMap[sub] || { unitIdx: 0, lessonIdx: 0, note: "" };
+                populateSubjectCascade(sub, saved.unitIdx || 0, saved.lessonIdx || 0);
+                document.getElementById(`noteInput-${sub}`).value = saved.note || "";
+            });
+
+            initDifficultySelectOptions(learnerProfile.adaptiveLevel || 1);
             document.getElementById("parentModal").classList.remove("hidden");
         }
 
@@ -612,30 +1422,69 @@
             document.getElementById("parentModal").classList.add("hidden");
         }
 
-        function resetAdaptiveLevel() {
-            learnerProfile.adaptiveLevel = 1;
-            document.getElementById("parentLevelDisplay").innerText = "1";
-            saveAllStates();
-            syncStatusUI();
-        }
-
         function saveParentSettings() {
             const ageVal = parseInt(document.getElementById("parentAgeInput").value, 10) || 9;
             const gradeVal = document.getElementById("parentGradeInput").value;
+            const termVal = document.getElementById("parentTermInput").value;
+            const levelVal = parseInt(document.getElementById("parentLevelSelect").value, 10) || 1;
+
             learnerProfile.age = ageVal;
             learnerProfile.grade = gradeVal;
-            learnerProfile.subjectProgress["数学"] = document.getElementById("progMathInput").value.trim() || "基础运算与生活应用";
-            learnerProfile.subjectProgress["语文"] = document.getElementById("progChineseInput").value.trim() || "课文阅读与写话表达";
-            learnerProfile.subjectProgress["英语"] = document.getElementById("progEnglishInput").value.trim() || "日常交际与基础词汇";
-            learnerProfile.subjectProgress["科学"] = document.getElementById("progScienceInput").value.trim() || "自然观察与生活科学现象";
+            learnerProfile.term = termVal;
+            learnerProfile.adaptiveLevel = levelVal;
+            if (!learnerProfile.curriculumSelection) learnerProfile.curriculumSelection = {};
+
+            const summaryLines = [];
+            ["数学", "语文", "英语", "科学"].forEach(sub => {
+                const uSel = document.getElementById(`unitSelect-${sub}`);
+                const lSel = document.getElementById(`lessonSelect-${sub}`);
+                const noteVal = document.getElementById(`noteInput-${sub}`).value.trim();
+
+                const uIdx = parseInt(uSel.value, 10) || 0;
+                const lIdx = parseInt(lSel.value, 10) || 0;
+                const uText = uSel.options[uIdx]?.text || "";
+                const lText = lSel.options[lIdx]?.text || "";
+
+                learnerProfile.curriculumSelection[sub] = {
+                    unitIdx: uIdx,
+                    lessonIdx: lIdx,
+                    note: noteVal
+                };
+
+                const fullDesc = `${gradeVal}${termVal} · ${uText} · ${lText}${noteVal ? `（补充重点：${noteVal}）` : ""}`;
+                learnerProfile.subjectProgress[sub] = fullDesc;
+                summaryLines.push(`• **${sub}**：${uText} → ${lText}${noteVal ? `（${noteVal}）` : ""}`);
+            });
+
+            const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === levelVal) || DIFFICULTY_LEVELS[0];
+
+            const syncNoticeMsg = `📋 **家长后台学习档案已同步更新！**\n\n- **年级与年龄**：${gradeVal}${termVal}（${ageVal}岁）\n- **当前难度等级**：${lvObj.title}（${lvObj.desc}）\n${summaryLines.join("\n")}\n\n布谷老师已收到最新课本进度，点下方任意学科即可立即按新进度与新难度出题！`;
+
+            const targetHist = currentMode === "base" ? baseChatHistory : interestChatHistory;
+            const lastChoices = (targetHist.length > 0 && targetHist[targetHist.length - 1].choices)
+                ? targetHist[targetHist.length - 1].choices
+                : ["📐 按新进度测数学", "📖 按新进度测语文", "🔤 按新进度测英语", "🔬 按新进度测科学"];
+
+            targetHist.push({
+                role: "assistant",
+                content: syncNoticeMsg,
+                choices: lastChoices
+            });
 
             saveAllStates();
             syncStatusUI();
-            closeParentModal();
-            updateSnakeUI("discovery", `进度档案已更新！布谷老师现在会按照【${gradeVal}（${ageVal}岁）】的课本进度来设计探险啦！`);
+            renderChatFromHistory();
+
+            const fb = document.getElementById("parentSaveFeedback");
+            fb.classList.remove("hidden");
+            updateSnakeUI("discovery", `进度档案已同步！现在是【${gradeVal}${termVal} · ${lvObj.title}】，快选一门学科试试新题目吧！`);
+
+            setTimeout(() => {
+                closeParentModal();
+            }, 850);
         }
 
-        // ==================== 4. 贪吃蛇尼克：弯曲路径 + 4科果实 + 实时移动伸长动画 ====================
+        // ==================== 6. 贪吃蛇尼克：弯曲路径 + 4科果实 + 实时移动伸长动画 ====================
         const snakeCanvas = document.getElementById("snakeCanvas");
         const sCtx = snakeCanvas.getContext("2d");
         const RAINBOW_PALETTE = [
@@ -913,7 +1762,7 @@
             updateSnakeUI(snakeState.mood, lines[Math.floor(Math.random() * lines.length)]);
         }
 
-        // ==================== 5. 每日闭环与双模式状态同步 ====================
+        // ==================== 7. 每日闭环与双模式状态同步 ====================
         function enforceModeVisibility() {
             const baseBar = document.getElementById("baseSubjectBar");
             const intTopBar = document.getElementById("interestTopBar");
@@ -972,7 +1821,8 @@
             const allFourDone = eatenCount >= 4;
             if (allFourDone) dailyState.growthCardUnlocked = true;
 
-            subtitle.innerText = `${learnerProfile.grade}（${learnerProfile.age}岁）· 难度阶梯 Lv.${learnerProfile.adaptiveLevel} · 布谷老师与贪吃蛇尼克`;
+            const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === Number(learnerProfile.adaptiveLevel)) || DIFFICULTY_LEVELS[0];
+            subtitle.innerText = `${learnerProfile.grade}${learnerProfile.term || "上册"}（${learnerProfile.age}岁）· ${lvObj.title} · 布谷老师与贪吃蛇尼克`;
             topicDisplay.innerText = dailyState.currentSubject
                 ? `${dailyState.currentSubject}探索中（${dailyState.subjectTurns[dailyState.currentSubject] || 0}轮）`
                 : (allFourDone ? "四科全部完成 🎉" : "点击上方学科开始");
@@ -1004,10 +1854,10 @@
             });
 
             if (allFourDone || dailyState.growthCardUnlocked) {
-                growthCardBtn.className = "bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1 min-h-[36px] animate-pulse";
+                growthCardBtn.className = "bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1 min-h-[38px] animate-pulse";
                 growthCardIcon.innerText = "💌";
             } else {
-                growthCardBtn.className = "bg-gray-200 hover:bg-gray-300 text-gray-600 px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 min-h-[36px]";
+                growthCardBtn.className = "bg-gray-200 hover:bg-gray-300 text-gray-600 px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 min-h-[38px]";
                 growthCardIcon.innerText = "🔒";
             }
 
@@ -1047,12 +1897,12 @@
                 : "在兴趣世界里点选项按钮、用键盘/语音自由提问或编故事...";
 
             if (currentMode === "base") {
-                baseBtn.className = "tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]";
-                intBtn.className = "text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]";
+                baseBtn.className = "tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[38px]";
+                intBtn.className = "text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[38px]";
                 updateSnakeUI(dailyState.completedSubjects.length > 0 ? "growing" : "companion");
             } else {
-                intBtn.className = "tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]";
-                baseBtn.className = "text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[36px]";
+                intBtn.className = "tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[38px]";
+                baseBtn.className = "text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[38px]";
 
                 if (dailyState.completedSubjects.length >= 4) {
                     updateSnakeUI("exploring", "欢迎来到兴趣世界！布谷老师会结合你学过的知识，带你向更深、更有挑战的领域探险，也能随时自由交流！");
@@ -1089,7 +1939,6 @@
             initBaseWelcome();
         }
 
-        // 确认完成当前学科并让尼克移动、变长、吃掉对应果实（严格防重复领取）
         function confirmEatSubjectFruit() {
             if (isEatingFruitLock) return;
             const sub = dailyState.currentSubject;
@@ -1108,7 +1957,6 @@
                     snakeState.growAnimProgress = 1.0;
                     snakeState.collectAnimTimer = 65;
                     snakeState.lastEatLabel = `吃掉${sub}果实! +2节`;
-                    learnerProfile.adaptiveLevel = Math.min(10, (learnerProfile.adaptiveLevel || 1) + 1);
                 }
 
                 const eatenCount = dailyState.completedSubjects.length;
@@ -1152,32 +2000,46 @@
         function continueDailyExploration() {
             if (!dailyState.currentSubject) return;
             dailyState.status = "IN_PROGRESS";
-            learnerProfile.adaptiveLevel = Math.min(10, (learnerProfile.adaptiveLevel || 1) + 1);
             saveAllStates();
             syncStatusUI();
-            sendMessage(`请出一道难度升级的【${dailyState.currentSubject}】选择题，给出完整题干和 3 个答案选项。`);
+            const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === Number(learnerProfile.adaptiveLevel)) || DIFFICULTY_LEVELS[0];
+            sendMessage(`请严格围绕【${learnerProfile.subjectProgress[dailyState.currentSubject]}】并按【${lvObj.title}】难度，再出一道【${dailyState.currentSubject}】选择题，给出完整题干和 3 个答案选项。`);
         }
 
-        // ==================== 6. System Prompt 构建器 ====================
+        // ==================== 8. System Prompt 构建器（含数学强制验算与难度档位精确映射） ====================
         function buildSystemPrompt() {
-            const profileInfo = `【家长后台设定的孩子档案】
-- 孩子年龄：${learnerProfile.age}岁，年级：${learnerProfile.grade}
-- 当前自适应能力阶梯：Lv.${learnerProfile.adaptiveLevel}（随表现逐步提升）
-- 各学科当前课本进度：
+            const lvNum = Number(learnerProfile.adaptiveLevel) || 1;
+            const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === lvNum) || DIFFICULTY_LEVELS[0];
+
+            const profileInfo = `【家长后台设定的孩子学习档案（必须严格遵循！）】
+- 孩子年龄：${learnerProfile.age}岁，当前年级与学期：${learnerProfile.grade}${learnerProfile.term || "上册"}
+- 当前指定难度等级：【${lvObj.title}】
+  * 难度执行细则：${lvObj.desc}
+  * 请严格按此档位控制题目的思考步骤数、已知条件隐蔽程度以及干扰项（错误选项）的迷惑度！
+- 各学科当前课本进度（必须紧扣对应的单元与课次知识点出题，严禁超纲或偏离单元主题）：
   * 数学：${learnerProfile.subjectProgress["数学"]}
   * 语文：${learnerProfile.subjectProgress["语文"]}
   * 英语：${learnerProfile.subjectProgress["英语"]}
   * 科学：${learnerProfile.subjectProgress["科学"]}`;
 
+            const mathVerificationRule = `
+【数学与计算题零差错硬性验算规则（极其重要！）】
+凡涉及任何数字计算、单位换算、时间推算、周长/面积/倍数/分数计算，或批改孩子的数学答案时：
+1. 你必须在内部先列出完整分步算式并逐位核对进位/退位，绝对禁止心算跳步。
+2. 出题时，必须确保 3 个选项（A、B、C）中**有且仅有一个**与精确计算结果完全一致，另外两个必须是合理的干扰项（例如忘记进位、单位看错等），严禁出现“3个选项全错”或“出现2个正确答案”。
+3. 批改孩子作答时，必须先独立算出题目的精确数值，再与孩子选择的选项对比，严禁被错误记忆误导。
+4. 每次涉及计算时，必须在回复的倒数第二行附上验算标记（系统会自动隐藏，不展示给孩子）：
+   [CALC: 完整分步算式 = 精确结果，对应正确选项字母]`;
+
             const choiceFormatRule = `
-【iPad 触控与语音优先交互铁律（极其重要，每轮回复必须严格遵守！）】
-孩子习惯在 iPad 上直接触控点选答案按钮，或使用键盘/语音回复：
-1. 每次回复必须简短清晰、口语化（100~170字以内），重点口诀或关键句可以用 **加粗** 突出，一次只推进一步或一道小题。
+【iPad 触控与语音优先交互铁律（每轮回复必须严格遵守！）】
+孩子在 iPad 上直接触控点选答案按钮，或使用键盘/语音回复：
+1. 每次回复简短清晰、口语化（100~175字以内），重点口诀或关键句用 **加粗** 突出，一次只推进一步或一道小题。
 2. 禁止只提开放式问答题而不给候选答案！每道题或每个探索步骤都必须给出完整题干/情境，并且提供 **3 个具体、可独立作答的选项（A、B、C）**。
 3. 在正文中必须完整写出题目和 3 个选项（如 A. ... / B. ... / C. ...），同时在回复的最后一行严格附上英文方括号标签：
    [CHOICES: A. 选项一 | B. 选项二 | C. 选项三]
    - 选项必须紧扣当前题目或当前场景，严禁出现与当前题目无关的通用按钮。
-   - 每个选项控制在 4~18 个字以内，小朋友触碰按钮即可直接提交作答。`;
+   - 每个选项控制在 4~18 个字以内，方便小朋友在 iPad 屏幕上直接触碰。`;
 
             if (currentMode === "base") {
                 const sub = dailyState.currentSubject || "综合探索";
@@ -1185,17 +2047,20 @@
                 const turns = dailyState.subjectTurns[sub] || 0;
                 const alreadyEaten = dailyState.completedSubjects.includes(sub);
 
-                return `你是“布谷老师”，一位亲切、温暖、充满好奇心、擅长启发思考的 AI 探索导师；你的搭档“贪吃蛇尼克”正陪着孩子沿着森林小径收集数学、语文、英语、科学 4 颗能量果实。
+                return `你是“布谷老师”，一位亲切、温暖、严谨且充满好奇心的 AI 探索导师；你的搭档“贪吃蛇尼克”正陪着孩子沿着森林小径收集数学、语文、英语、科学 4 颗能量果实。
 
 ${profileInfo}
+${mathVerificationRule}
 
 【当前任务与教学策略】
 1. 角色一致性：你始终是“布谷老师”，对话中可以自然提到“贪吃蛇尼克”，说话主体永远是布谷老师。
-2. 题型与选项规范：
-   - 当前探索学科：【${sub}】，对应课本进度：【${subProgress}】，当前能力阶梯：【Lv.${learnerProfile.adaptiveLevel}】。
+2. 精准对齐课本单元与难度：
+   - 当前探索学科：【${sub}】
+   - 锁定课本进度：【${subProgress}】
+   - 锁定难度等级：【${lvObj.title}】（${lvObj.desc}）
    - 数学、科学、英语、语文均采用带 3 个明确选项（A、B、C）的选择题（英语题也要给出完整英文问候/句子与 3 个具体选项）。
-   - 第 1 轮：结合课本进度给出生活情境、完整题干和 3 个选项。
-   - 第 2 轮及以后：先针对孩子上一轮的选择给出明确反馈与简短解释；若该学科尚未完成，继续给出下一道带 3 个选项的选择题。
+   - 第 1 轮：紧扣上述单元/课次知识点与指定难度等级，给出生活情境、完整题干和 3 个选项。
+   - 第 2 轮及以后：先针对孩子上一轮的选择给出明确反馈与简短解释（若为计算题先核对算式）；若该学科尚未完成，继续给出下一道同单元/同难度的带 3 个选项的选择题。
 ${choiceFormatRule}
 3. 学科完成标记：
    - 当前【${sub}】已交互轮次：${turns}（本轮是否已吃过果实：${alreadyEaten ? "是" : "否"}）。
@@ -1204,15 +2069,16 @@ ${choiceFormatRule}
                 const learnedSummary = dailyState.completedSubjects.length > 0
                     ? `今天刚刚完成了：${dailyState.completedSubjects.join("、")}的探索。`
                     : "正准备开启拓展探索。";
-                const storySummary = `世界设定：${storyState.worldSetting || "奇幻探索世界"}；当前场景：${storyState.currentScene || "冒险起点"}；当前探索深度：第 ${storyState.depthStage} 阶段（能力阶梯 Lv.${learnerProfile.adaptiveLevel}）；已发现线索：${storyState.discoveredClues.join("、") || "暂无"}。`;
+                const storySummary = `世界设定：${storyState.worldSetting || "奇幻探索世界"}；当前场景：${storyState.currentScene || "冒险起点"}；当前探索深度：第 ${storyState.depthStage} 阶段（难度阶梯 ${lvObj.title}）；已发现线索：${storyState.discoveredClues.join("、") || "暂无"}。`;
 
                 return `你是“布谷老师”，正在【兴趣世界】里以冒险伙伴与向导的身份，带着贪吃蛇尼克和孩子一起探索【${storyState.worldSetting || "奇幻探索世界"}】。
 
 ${profileInfo}
+${mathVerificationRule}
 ${learnedSummary}
 
 【兴趣世界核心规则】
-1. 角色与氛围：更像冒险中的故事伙伴，根据【${storyState.worldSetting || "奇幻探索世界"}】营造画面感，允许孩子自由提问、编故事或表达想法，在合适时机自然融入【${learnerProfile.grade}】课本知识延伸。
+1. 角色与氛围：更像冒险中的故事伙伴，根据【${storyState.worldSetting || "奇幻探索世界"}】营造画面感，允许孩子自由提问、编故事或表达想法，在合适时机自然融入【${learnerProfile.grade}${learnerProfile.term || "上册"}】课本知识延伸，并匹配【${lvObj.title}】的推理深度。
 2. 探索行动选项：在正文中清晰说明当前情境与 3 个行动选项，并在最后一行严格附上 [CHOICES: A. ... | B. ... | C. ...]。
 ${choiceFormatRule}
 3. 阶段节点提示：
@@ -1228,10 +2094,11 @@ ${storySummary}
             }
         }
 
-        // ==================== 7. 初始化与快捷交互入口 ====================
+        // ==================== 9. 初始化与快捷交互入口 ====================
         function initBaseWelcome() {
             if (baseChatHistory.length === 0) {
-                const welcomeMsg = `你好呀！我是布谷老师，旁边这位扭来扭去的小家伙是贪吃蛇尼克 🐍\n\n森林小径上有 **数学、语文、英语、科学** 4 颗能量果实！我已经记下了你【${learnerProfile.grade}】的课本进度，每完成一门探索，尼克就会向前爬行并长高一节。\n\n直接点下方按钮就可以开始今天的第一颗果实啦！`;
+                const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === Number(learnerProfile.adaptiveLevel)) || DIFFICULTY_LEVELS[0];
+                const welcomeMsg = `你好呀！我是布谷老师，旁边这位扭来扭去的小家伙是贪吃蛇尼克 🐍\n\n森林小径上有 **数学、语文、英语、科学** 4 颗能量果实！我已经记下了你【${learnerProfile.grade}${learnerProfile.term || "上册"}】（${lvObj.title}）的课本进度，每完成一门探索，尼克就会向前爬行并长高一节。\n\n直接点下方按钮就可以开始今天的第一颗果实啦！`;
                 baseChatHistory.push({
                     role: "assistant",
                     content: welcomeMsg,
@@ -1252,15 +2119,16 @@ ${storySummary}
                 dailyState.status = "IN_PROGRESS";
             }
             const prog = learnerProfile.subjectProgress[subject] || "本学期基础内容";
+            const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === Number(learnerProfile.adaptiveLevel)) || DIFFICULTY_LEVELS[0];
             const isAlreadyDone = dailyState.completedSubjects.includes(subject);
 
             saveAllStates();
             syncStatusUI();
-            updateSnakeUI("discovery", `布谷老师正在为你和尼克准备【${subject}】探索情境（课本进度：${prog}）...`);
+            updateSnakeUI("discovery", `布谷老师正在按【${prog} · ${lvObj.title}】准备【${subject}】题目...`);
 
             const promptText = isAlreadyDone
-                ? `请结合【${prog}】出一道【${subject}】升级加练选择题，必须包含完整题干和 3 个选项（A、B、C），并在最后一行输出 [CHOICES: A. ... | B. ... | C. ...]。`
-                : `请结合【${prog}】为我开启第一个【${subject}】生活探索情境与选择题，必须包含完整题干和 3 个选项（A、B、C），并在最后一行输出 [CHOICES: A. ... | B. ... | C. ...]。`;
+                ? `请严格紧扣课本进度【${prog}】并按照【${lvObj.title}】难度标准，出一道【${subject}】升级加练选择题，必须包含完整题干和 3 个选项（A、B、C），并在最后一行输出 [CHOICES: A. ... | B. ... | C. ...]。`
+                : `请严格紧扣课本进度【${prog}】并按照【${lvObj.title}】难度标准，为我开启第一个【${subject}】生活探索情境与选择题，必须包含完整题干和 3 个选项（A、B、C），并在最后一行输出 [CHOICES: A. ... | B. ... | C. ...]。`;
             sendMessage(promptText);
         }
 
@@ -1305,10 +2173,9 @@ ${storySummary}
             storyState.waitingNodeChoice = false;
             storyState.depthStage += 1;
             storyState.stageTurns = 0;
-            learnerProfile.adaptiveLevel = Math.min(10, (learnerProfile.adaptiveLevel || 1) + 1);
             saveAllStates();
             syncStatusUI();
-            sendMessage(`请带我进入【${storyState.worldSetting || "兴趣世界"}】的第 ${storyState.depthStage} 阶段，提升挑战难度并给出 3 个可点选的行动选项（A、B、C），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
+            sendMessage(`请带我进入【${storyState.worldSetting || "兴趣世界"}】的第 ${storyState.depthStage} 阶段，提升挑战深度并给出 3 个可点选的行动选项（A、B、C），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
         }
 
         function finishInterestSession() {
@@ -1336,7 +2203,7 @@ ${storySummary}
             sendMessage(promptText, true);
         }
 
-        // ==================== 8. 图片上传（视觉理解）与图片生成 ====================
+        // ==================== 10. 图片上传（视觉理解）与图片生成 ====================
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1377,18 +2244,77 @@ ${storySummary}
             document.getElementById("pendingImageThumb").src = "";
         }
 
+        async function generateAiHeroBanner() {
+            const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
+            const baseUrl = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
+            const imgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL);
+
+            if (!apiKey || !imgModel) {
+                openModelModal();
+                return;
+            }
+
+            const btn = document.getElementById("aiHeroPaintBtn");
+            const oldText = btn.innerText;
+            btn.innerText = "🎨 绘制中...";
+            btn.disabled = true;
+
+            try {
+                const topics = [
+                    "cute green little snake exploring a starry space station with a wise friendly owl, children's picture book watercolor style, wide panoramic banner, no text",
+                    "friendly owl teacher and cute colorful snake discovering glowing crystals in a magical dinosaur valley, warm storybook illustration, no text",
+                    "whimsical underwater coral laboratory with a happy cute snake and friendly owl, bright watercolor children's illustration, no text"
+                ];
+                const prompt = topics[Math.floor(Math.random() * topics.length)];
+                const response = await fetch(`${baseUrl}/images/generations`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: imgModel,
+                        prompt: prompt,
+                        n: 1,
+                        size: "1024x1024"
+                    })
+                });
+                const data = await response.json();
+                if (response.ok && data.data && data.data[0]) {
+                    const imgUrl = data.data[0].url || (data.data[0].b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : "");
+                    if (imgUrl) {
+                        const img = new Image();
+                        img.crossOrigin = "anonymous";
+                        img.onload = () => {
+                            heroAiImageObj = img;
+                            updateHeroBannerLabel();
+                        };
+                        img.src = imgUrl;
+                    }
+                } else {
+                    alert(`封面绘制未成功：${data.error?.message || "请检查生图模型配置"}`);
+                }
+            } catch (e) {
+                alert(`封面绘制出错：${e.message}`);
+            } finally {
+                btn.innerText = oldText;
+                btn.disabled = false;
+            }
+        }
+
         async function requestStoryIllustration() {
             const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
             const baseUrl = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
-            const imgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || document.getElementById("imageModelInput").value.trim();
+            const imgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL);
 
             if (!apiKey) {
-                alert("请先在右上角“模型设置”中填写并保存 API Key！");
+                alert("请先在右上角【⚙️ 模型设置】中填写并保存 API Key！");
+                openModelModal();
                 return;
             }
 
             if (!imgModel) {
-                const notice = "⚠️ 提示：当前尚未配置专门的图像生成模型。普通纯文本对话模型无法直接生成图片。\n\n如需开启故事插图生成，请点击右上角【⚙️ 模型设置】，在“生图模型”框中填入支持 `/images/generations` 接口的图像模型 ID（例如 `dall-e-3`）并保存后再试。";
+                const notice = "⚠️ 提示：当前尚未配置专门的图像生成模型。普通纯文本对话模型无法直接生成图片。\n\n如需开启故事插图生成，请点击右上角【⚙️ 模型设置】，在“生图模型名称”框中填入支持 `/images/generations` 接口的图像模型 ID 并保存后再试。";
                 appendMessageBubble(notice, "model");
                 return;
             }
@@ -1442,7 +2368,7 @@ ${storySummary}
             }
         }
 
-        // ==================== 9. 语音输入与中文朗读 ====================
+        // ==================== 11. 语音输入与中文朗读 ====================
         function toggleTTS() {
             ttsEnabled = !ttsEnabled;
             const btn = document.getElementById("ttsToggleBtn");
@@ -1547,7 +2473,7 @@ ${storySummary}
             btn.innerText = "🎤";
         }
 
-        // ==================== 10. 真实模型调用与上下文通信 ====================
+        // ==================== 12. 真实模型调用与上下文通信 ====================
         function handleKeyPress(e) {
             if (e.key === "Enter") {
                 e.preventDefault();
@@ -1572,7 +2498,7 @@ ${storySummary}
         async function callChatCompletionWithFormatGuard(baseUrl, apiKey, modelName, apiMessages, sessionMode, isSummaryReq) {
             const formatTail = isSummaryReq
                 ? ""
-                : "\n\n【输出格式硬性要求】你必须给出完整题干与 3 个具体候选答案（A、B、C），在正文中清晰写出题目和 3 个选项，并在最后一行严格输出：`[CHOICES: A. 选项一 | B. 选项二 | C. 选项三]`（严禁漏写方括号或只出开放问答题）。";
+                : "\n\n【输出格式与验算硬性要求】1. 若涉及计算，必须在倒数第二行写出 `[CALC: 分步算式 = 精确结果]` 并核对选项；2. 必须给出完整题干与 3 个具体候选答案（A、B、C），在正文中清晰写出题目和 3 个选项，并在最后一行严格输出：`[CHOICES: A. 选项一 | B. 选项二 | C. 选项三]`。";
 
             const msgsWithGuard = apiMessages.map((m, i) => {
                 if (i === apiMessages.length - 1 && m.role === "user" && formatTail) {
@@ -1597,7 +2523,7 @@ ${storySummary}
                     body: JSON.stringify({
                         model: modelName,
                         messages: messagesPayload,
-                        temperature: 0.65
+                        temperature: 0.55
                     })
                 });
                 const json = await resp.json();
@@ -1679,21 +2605,25 @@ ${storySummary}
             }
 
             const subMatch = rawText.match(/(数学|语文|英语|科学)/);
-            if (subMatch && (rawText.includes("果实") || rawText.includes("挑战") || rawText.includes("进入【"))) {
+            if (subMatch && (rawText.includes("果实") || rawText.includes("挑战") || rawText.includes("进入【") || rawText.includes("按新进度测"))) {
                 if (currentMode !== "base") {
                     currentMode = "base";
                     switchMode("base");
                 }
                 dailyState.currentSubject = subMatch[1];
+                if (rawText.includes("按新进度测")) {
+                    startSubjectExplore(subMatch[1]);
+                    return;
+                }
             }
 
             const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
             const baseUrl = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
-            const modelName = localStorage.getItem(STORAGE_KEYS.MODEL) || "google/gemini-3-flash";
+            const modelName = localStorage.getItem(STORAGE_KEYS.MODEL) || "openai/gpt-5.6-luna";
 
             if (!apiKey) {
                 alert("请先点击右上角【⚙️ 模型设置】，输入并保存你的 API Key！");
-                toggleSettingsPanel();
+                openModelModal();
                 return;
             }
 
@@ -1845,6 +2775,8 @@ ${storySummary}
             let choices = [];
             let missingOptions = false;
 
+            cleanText = cleanText.replace(/[\[【]\s*CALC\s*[:：][\s\S]*?[\]】]/gi, "").trim();
+
             if (/\[(SUBJECT_DONE|SUGGEST_FINISH)\]/i.test(cleanText)) {
                 subjectDone = true;
                 cleanText = cleanText.replace(/\[(SUBJECT_DONE|SUGGEST_FINISH)\]/gi, "").trim();
@@ -1892,7 +2824,7 @@ ${storySummary}
 
             let fullDisplayText = cleanText;
 
-            if (choices.length > 0 && !/missingOptions/i.test(String(choices[0]))) {
+            if (choices.length > 0) {
                 const hasInlineOptions = choices.every(opt => {
                     const shortLabel = opt.replace(/^[A-Da-d][\.\．、\)）:：]\s*/, "").trim();
                     return shortLabel && cleanText.includes(shortLabel);
@@ -1919,7 +2851,7 @@ ${storySummary}
             return { cleanText, fullDisplayText, subjectDone, stageCheckpoint, newScene, newClue, choices, missingOptions };
         }
 
-        // ==================== 11. 聊天记录渲染与对话框上方横向快捷选项栏 ====================
+        // ==================== 13. 聊天记录渲染与对话框上方横向快捷选项栏 ====================
         function renderQuickChoiceBar(choices) {
             const bar = document.getElementById("quickChoiceBar");
             if (!bar) return;
@@ -1978,7 +2910,7 @@ ${storySummary}
                 const eaten = dailyState.completedSubjects.length;
                 const rem = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
                 const intro = eaten >= 4
-                    ? `✨ 恭喜集齐4科能量果实，兴趣世界已完全解锁！\n\n在这里，布谷老师会结合你【${learnerProfile.grade}】学过的课本知识，带着贪吃蛇尼克向更深、更有挑战的拓展领域进发，你也可以随时自由提问或编故事！`
+                    ? `✨ 恭喜集齐4科能量果实，兴趣世界已完全解锁！\n\n在这里，布谷老师会结合你【${learnerProfile.grade}${learnerProfile.term || "上册"}】学过的课本知识，带着贪吃蛇尼克向更深、更有挑战的拓展领域进发，你也可以随时自由提问或编故事！`
                     : `🌱 这里是兴趣世界预览区！目前贪吃蛇尼克已吃掉 **${eaten}/4** 颗学科果实。集齐【数学、语文、英语、科学】全部 4 颗果实后，就能开启完整自由的兴趣探险啦！`;
                 appendMessageBubble(intro, "model");
                 if (eaten >= 4) {
@@ -2079,4 +3011,9 @@ ${storySummary}
         initBaseWelcome();
     </script>
 </body>
-</html>
+</html>'''
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("Saved index.html successfully. Length:", len(html_content))
