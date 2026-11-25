@@ -1,4 +1,4 @@
-html_content = r'''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -6,37 +6,392 @@ html_content = r'''<!DOCTYPE html>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>好奇心俱乐部 - 探索伙伴</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script>
+        (function() {
+            try {
+                const testKey = "__curiosity_club_test__";
+                window.localStorage.setItem(testKey, "1");
+                window.localStorage.removeItem(testKey);
+            } catch (e) {
+                const memStore = {};
+                Object.defineProperty(window, "localStorage", {
+                    value: {
+                        getItem: function(k) { return Object.prototype.hasOwnProperty.call(memStore, k) ? memStore[k] : null; },
+                        setItem: function(k, v) { memStore[k] = String(v); },
+                        removeItem: function(k) { delete memStore[k]; },
+                        clear: function() { for (const k in memStore) delete memStore[k]; }
+                    },
+                    configurable: true
+                });
+            }
+        })();
+    </script>
     <style>
         #bgCanvas {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
         }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 4px; }
-        .tab-active {
-            background-color: #059669;
-            color: white;
-            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
-        }
         button, input, select, textarea {
             touch-action: manipulation;
         }
         .modal-scroll {
             -webkit-overflow-scrolling: touch;
         }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        @keyframes macaronRainbowSlow {
+            0% {
+                background-position: 0% 50%;
+            }
+            25% {
+                background-position: 50% 20%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            75% {
+                background-position: 50% 80%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            color: #1f2937;
+            background: linear-gradient(135deg, #ffd6e7 0%, #ffe8c2 18%, #fff7c2 36%, #d5f5e3 54%, #d6eaf8 72%, #ebdef0 88%, #ffd6e7 100%);
+            background-size: 360% 360%;
+            animation: macaronRainbowSlow 10s ease-in-out infinite;
+            min-height: 100vh;
+        }
+        .hidden { display: none !important; }
+        .block { display: block; }
+        .flex { display: flex; }
+        .grid { display: grid; }
+        .flex-col { flex-direction: column; }
+        .flex-wrap { flex-wrap: wrap; }
+        .flex-1 { flex: 1 1 0%; }
+        .shrink-0 { flex-shrink: 0; }
+        .items-center { align-items: center; }
+        .items-start { align-items: flex-start; }
+        .items-stretch { align-items: stretch; }
+        .justify-between { justify-content: space-between; }
+        .justify-center { justify-content: center; }
+        .justify-end { justify-content: flex-end; }
+        .gap-1 { gap: 0.25rem; }
+        .gap-1\.5 { gap: 0.375rem; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-2\.5 { gap: 0.625rem; }
+        .gap-3 { gap: 0.75rem; }
+        .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        .grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+        .p-1 { padding: 0.25rem; }
+        .p-2 { padding: 0.5rem; }
+        .p-2\.5 { padding: 0.625rem; }
+        .p-3 { padding: 0.75rem; }
+        .p-3\.5 { padding: 0.875rem; }
+        .p-4 { padding: 1rem; }
+        .p-5 { padding: 1.25rem; }
+        .px-1 { padding-left: 0.25rem; padding-right: 0.25rem; }
+        .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+        .px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+        .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+        .px-3\.5 { padding-left: 0.875rem; padding-right: 0.875rem; }
+        .px-4 { padding-left: 1rem; padding-right: 1rem; }
+        .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+        .py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+        .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+        .py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+        .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+        .py-2\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+        .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .pb-3 { padding-bottom: 0.75rem; }
+        .pl-3 { padding-left: 0.75rem; }
+        .pt-2\.5 { padding-top: 0.625rem; }
+        .mx-0\.5 { margin-left: 0.125rem; margin-right: 0.125rem; }
+        .mx-1\.5 { margin-left: 0.375rem; margin-right: 0.375rem; }
+        .my-1\.5 { margin-top: 0.375rem; margin-bottom: 0.375rem; }
+        .my-2 { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        .my-2\.5 { margin-top: 0.625rem; margin-bottom: 0.625rem; }
+        .mb-0\.5 { margin-bottom: 0.125rem; }
+        .mb-1 { margin-bottom: 0.25rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-2\.5 { margin-bottom: 0.625rem; }
+        .mt-0\.5 { margin-top: 0.125rem; }
+        .mt-1\.5 { margin-top: 0.375rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .mt-2\.5 { margin-top: 0.625rem; }
+        .mt-3 { margin-top: 0.75rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mt-5 { margin-top: 1.25rem; }
+        .ml-auto { margin-left: auto; }
+        .space-y-0\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.125rem; }
+        .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
+        .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
+        .space-y-3\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.875rem; }
+        .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+
+        .relative { position: relative; }
+        .fixed { position: fixed; }
+        .absolute { position: absolute; }
+        .inset-0 { inset: 0; }
+        .top-2 { top: 0.5rem; }
+        .bottom-2 { bottom: 0.5rem; }
+        .left-2\.5 { left: 0.625rem; }
+        .right-2\.5 { right: 0.625rem; }
+        .z-10 { z-index: 10; }
+        .z-50 { z-index: 50; }
+        .w-full { width: 100%; }
+        .w-2 { width: 0.5rem; }
+        .w-8 { width: 2rem; }
+        .w-9 { width: 2.25rem; }
+        .w-11 { width: 2.75rem; }
+        .w-12 { width: 3rem; }
+        .w-px { width: 1px; }
+        .h-2 { height: 0.5rem; }
+        .h-6 { height: 1.5rem; }
+        .h-8 { height: 2rem; }
+        .h-9 { height: 2.25rem; }
+        .h-11 { height: 2.75rem; }
+        .h-12 { height: 3rem; }
+        .h-full { height: 100%; }
+        .h-\[94px\] { height: 94px; }
+        .h-\[270px\] { height: 270px; }
+        .h-\[72vh\] { height: 72vh; }
+        .min-h-screen { min-height: 100vh; }
+        .min-h-\[36px\] { min-height: 36px; }
+        .min-h-\[38px\] { min-height: 38px; }
+        .min-h-\[40px\] { min-height: 40px; }
+        .min-h-\[42px\] { min-height: 42px; }
+        .min-h-\[44px\] { min-height: 44px; }
+        .max-w-6xl { max-width: 72rem; }
+        .max-w-2xl { max-width: 42rem; }
+        .max-w-md { max-width: 28rem; }
+        .max-w-full { max-width: 100%; }
+        .max-w-\[95px\] { max-width: 95px; }
+        .max-w-\[165px\] { max-width: 165px; }
+        .max-w-\[200px\] { max-width: 200px; }
+        .max-w-\[82\%\] { max-width: 82%; }
+        .max-w-\[85\%\] { max-width: 85%; }
+        .max-w-\[86\%\] { max-width: 86%; }
+        .max-h-\[180px\] { max-height: 180px; }
+        .max-h-\[90vh\] { max-height: 90vh; }
+        .max-h-\[92vh\] { max-height: 92vh; }
+        .overflow-hidden { overflow: hidden; }
+        .overflow-x-hidden { overflow-x: hidden; }
+        .overflow-x-auto { overflow-x: auto; }
+        .overflow-y-auto { overflow-y: auto; }
+        .object-cover { object-fit: cover; }
+        .object-contain { object-fit: contain; }
+
+        .text-\[10px\] { font-size: 10px; line-height: 1.4; }
+        .text-\[11px\] { font-size: 11px; line-height: 1.45; }
+        .text-xs { font-size: 0.75rem; line-height: 1rem; }
+        .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+        .text-base { font-size: 1rem; line-height: 1.5rem; }
+        .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+        .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+        .font-normal { font-weight: 400; }
+        .font-medium { font-weight: 500; }
+        .font-bold { font-weight: 700; }
+        .font-extrabold { font-weight: 800; }
+        .tracking-tight { letter-spacing: -0.025em; }
+        .leading-relaxed { line-height: 1.625; }
+        .text-center { text-align: center; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .whitespace-pre-wrap { white-space: pre-wrap; }
+        .cursor-pointer { cursor: pointer; }
+
+        .border { border: 1px solid #e5e7eb; }
+        .border-t { border-top: 1px solid #e5e7eb; }
+        .border-b { border-bottom: 1px solid #e5e7eb; }
+        .border-l-4 { border-left: 4px solid #34d399; }
+        .border-white\/60 { border-color: rgba(255,255,255,0.6); }
+        .border-gray-100 { border-color: #f3f4f6; }
+        .border-gray-200 { border-color: #e5e7eb; }
+        .border-slate-200 { border-color: #e2e8f0; }
+        .border-slate-300 { border-color: #cbd5e1; }
+        .border-emerald-100, .border-emerald-100\/80, .border-emerald-100\/90 { border-color: #d1fae5; }
+        .border-emerald-200, .border-emerald-200\/70 { border-color: #a7f3d0; }
+        .border-emerald-300 { border-color: #6ee7b7; }
+        .border-emerald-400, .border-emerald-400\/50 { border-color: #34d399; }
+        .border-amber-200 { border-color: #fde68a; }
+        .border-amber-300 { border-color: #fcd34d; }
+        .border-blue-100 { border-color: #dbeafe; }
+        .border-blue-200 { border-color: #bfdbfe; }
+        .border-indigo-100 { border-color: #e0e7ff; }
+        .border-indigo-200 { border-color: #c7d2fe; }
+        .border-purple-100 { border-color: #f3e8ff; }
+        .border-purple-200 { border-color: #e9d5ff; }
+        .border-purple-300 { border-color: #d8b4fe; }
+        .border-rose-100 { border-color: #ffe4e6; }
+        .border-rose-200 { border-color: #fecdd3; }
+        .border-orange-300 { border-color: #fdba74; }
+        .border-teal-200 { border-color: #99f6e4; }
+
+        .rounded-md { border-radius: 0.375rem; }
+        .rounded-lg { border-radius: 0.5rem; }
+        .rounded-r-lg { border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
+        .rounded-xl { border-radius: 0.75rem; }
+        .rounded-2xl { border-radius: 1rem; }
+        .rounded-3xl { border-radius: 1.5rem; }
+        .rounded-full { border-radius: 9999px; }
+        .rounded-tl-none { border-top-left-radius: 0; }
+        .rounded-tr-none { border-top-right-radius: 0; }
+
+        .shadow-2xs { box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+        .shadow-xs { box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+        .shadow-sm { box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+        .shadow-lg { box-shadow: 0 10px 25px -5px rgba(0,0,0,0.12); }
+        .shadow-xl { box-shadow: 0 20px 35px -8px rgba(0,0,0,0.16); }
+        .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.28); }
+        .shadow-inner { box-shadow: inset 0 2px 4px rgba(0,0,0,0.06); }
+        .backdrop-blur-md { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .backdrop-blur-xs { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+
+        .bg-white { background-color: #ffffff; }
+        .bg-white\/80 { background-color: rgba(255,255,255,0.82); }
+        .bg-white\/85 { background-color: rgba(255,255,255,0.88); }
+        .bg-white\/90 { background-color: rgba(255,255,255,0.92); }
+        .bg-white\/95 { background-color: rgba(255,255,255,0.96); }
+        .bg-black\/40 { background-color: rgba(0,0,0,0.42); }
+        .bg-black\/45 { background-color: rgba(15,23,42,0.48); }
+        .bg-gray-50, .bg-gray-50\/95 { background-color: #f9fafb; }
+        .bg-gray-100 { background-color: #f3f4f6; }
+        .bg-gray-200, .bg-gray-200\/70 { background-color: #e5e7eb; }
+        .bg-gray-300 { background-color: #d1d5db; }
+        .bg-slate-100 { background-color: #f1f5f9; }
+        .bg-emerald-50, .bg-emerald-50\/30 { background-color: #ecfdf5; }
+        .bg-emerald-50\/90 { background-color: rgba(236,253,245,0.92); }
+        .bg-emerald-100 { background-color: #d1fae5; }
+        .bg-emerald-500 { background-color: #10b981; }
+        .bg-emerald-600 { background-color: #059669; }
+        .bg-amber-50, .bg-amber-50\/80 { background-color: #fffbeb; }
+        .bg-amber-100 { background-color: #fef3c7; }
+        .bg-amber-500 { background-color: #f59e0b; }
+        .bg-blue-50, .bg-blue-50\/30, .bg-blue-50\/90 { background-color: #eff6ff; }
+        .bg-blue-500 { background-color: #3b82f6; }
+        .bg-blue-600 { background-color: #2563eb; }
+        .bg-indigo-50, .bg-indigo-50\/60 { background-color: #eef2ff; }
+        .bg-indigo-100 { background-color: #e0e7ff; }
+        .bg-indigo-600 { background-color: #4f46e5; }
+        .bg-purple-50, .bg-purple-50\/30 { background-color: #faf5ff; }
+        .bg-purple-100 { background-color: #f3e8ff; }
+        .bg-purple-500 { background-color: #a855f7; }
+        .bg-purple-600, .bg-purple-600\/90 { background-color: #9333ea; }
+        .bg-rose-50, .bg-rose-50\/30 { background-color: #fff1f2; }
+        .bg-rose-400 { background-color: #fb7185; }
+        .bg-rose-500 { background-color: #f43f5e; }
+        .bg-rose-600 { background-color: #e11d48; }
+        .bg-orange-50 { background-color: #fff7ed; }
+        .bg-pink-500 { background-color: #ec4899; }
+        .bg-teal-50 { background-color: #f0fdfa; }
+
+        .bg-gradient-to-b { background-image: linear-gradient(to bottom, #fffbeb, #ecfdf5, #f0fdfa); }
+        .bg-gradient-to-r.from-purple-50 { background-image: linear-gradient(to right, #faf5ff, #eef2ff, #fdf2f8); }
+        .bg-gradient-to-r.from-slate-50 { background-image: linear-gradient(to right, #f8fafc, #ffffff, #f8fafc); }
+
+        .text-white, .text-white\/90, .text-white\/95 { color: #ffffff; }
+        .text-gray-300 { color: #d1d5db; }
+        .text-gray-500 { color: #6b7280; }
+        .text-gray-600 { color: #4b5563; }
+        .text-gray-700 { color: #374151; }
+        .text-gray-800 { color: #1f2937; }
+        .text-gray-900 { color: #111827; }
+        .text-slate-500 { color: #64748b; }
+        .text-slate-800 { color: #1e293b; }
+        .text-emerald-500 { color: #10b981; }
+        .text-emerald-700 { color: #047857; }
+        .text-emerald-800 { color: #065f46; }
+        .text-emerald-900 { color: #064e3b; }
+        .text-amber-700 { color: #b45309; }
+        .text-amber-800 { color: #92400e; }
+        .text-amber-900 { color: #78350f; }
+        .text-amber-950 { color: #451a03; }
+        .text-blue-500 { color: #3b82f6; }
+        .text-blue-600 { color: #2563eb; }
+        .text-blue-700 { color: #1d4ed8; }
+        .text-blue-800 { color: #1e40af; }
+        .text-indigo-600 { color: #4f46e5; }
+        .text-indigo-700 { color: #4338ca; }
+        .text-indigo-800 { color: #3730a3; }
+        .text-indigo-900 { color: #312e81; }
+        .text-purple-500 { color: #a855f7; }
+        .text-purple-600 { color: #9333ea; }
+        .text-purple-700 { color: #7e22ce; }
+        .text-purple-800 { color: #6b21a8; }
+        .text-purple-900 { color: #581c87; }
+        .text-rose-500 { color: #f43f5e; }
+        .text-rose-700 { color: #be123c; }
+        .text-rose-800 { color: #9f1239; }
+        .text-orange-800 { color: #9a3412; }
+        .text-pink-700 { color: #be185d; }
+        .text-teal-600 { color: #0d9488; }
+        .text-teal-800 { color: #115e59; }
+
+        button { border: none; outline: none; font-family: inherit; transition: all 0.15s ease; }
+        button:active { transform: scale(0.97); }
+        .hover\:bg-indigo-200:hover { background-color: #c7d2fe; }
+        .hover\:bg-indigo-700:hover { background-color: #4338ca; }
+        .hover\:bg-amber-100:hover { background-color: #fef3c7; }
+        .hover\:bg-amber-200:hover { background-color: #fde68a; }
+        .hover\:bg-amber-600:hover { background-color: #d97706; }
+        .hover\:bg-slate-200:hover { background-color: #e2e8f0; }
+        .hover\:bg-emerald-100:hover { background-color: #d1fae5; }
+        .hover\:bg-emerald-600:hover { background-color: #059669; }
+        .hover\:bg-emerald-700:hover { background-color: #047857; }
+        .hover\:bg-blue-100:hover { background-color: #dbeafe; }
+        .hover\:bg-blue-600:hover { background-color: #2563eb; }
+        .hover\:bg-blue-700:hover { background-color: #1d4ed8; }
+        .hover\:bg-rose-600:hover { background-color: #e11d48; }
+        .hover\:bg-rose-700:hover { background-color: #be123c; }
+        .hover\:bg-purple-200:hover { background-color: #e9d5ff; }
+        .hover\:bg-purple-600:hover { background-color: #9333ea; }
+        .hover\:bg-purple-700:hover { background-color: #7e22ce; }
+        .hover\:bg-pink-600:hover { background-color: #db2777; }
+        .hover\:bg-gray-200:hover { background-color: #e5e7eb; }
+        .tab-active { background-color: #059669 !important; color: #ffffff !important; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3); }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        @media (min-width: 640px) {
+            .sm\:p-3 { padding: 0.75rem; }
+            .sm\:p-4 { padding: 1rem; }
+            .sm\:p-6 { padding: 1.5rem; }
+            .sm\:px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+            .sm\:gap-3 { gap: 0.75rem; }
+            .sm\:flex-row { flex-direction: row; }
+            .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .sm\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .sm\:h-\[102px\] { height: 102px; }
+            .sm\:inline-block { display: inline-block; }
+            .sm\:max-w-\[340px\] { max-width: 340px; }
+            .sm\:text-xs { font-size: 0.75rem; line-height: 1rem; }
+            .sm\:text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+            .sm\:text-base { font-size: 1rem; line-height: 1.5rem; }
+            .sm\:text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+            .sm\:text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+        }
+        @media (min-width: 1024px) {
+            .lg\:flex-row { flex-direction: row; }
+            .lg\:items-center { align-items: center; }
+            .lg\:w-80 { width: 20rem; flex-shrink: 0; }
+            .lg\:w-\[430px\] { width: 430px; }
+            .lg\:h-\[76vh\] { height: 76vh; }
+        }
     </style>
 </head>
 <body id="mainBody" class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 font-sans text-gray-800 transition-colors duration-1000 relative overflow-x-hidden">
-
-    <!-- 背景微互动粒子画布 -->
     <canvas id="bgCanvas"></canvas>
 
-    <!-- 顶部主栏：左侧控制区 + 右侧每日奇遇插画横幅 -->
     <header class="relative z-10 w-full max-w-6xl bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-lg flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 border border-white/60">
-        <!-- 左侧标题与三大核心按钮 -->
         <div class="flex flex-col justify-between gap-2.5 flex-1">
             <div class="flex items-center gap-2.5">
-                <span class="text-2xl sm:text-3xl" id="themeBadge">🌿</span>
+                <span class="text-2xl sm:text-3xl" id="themeBadge">🍬</span>
                 <div>
                     <h1 class="text-base sm:text-lg font-extrabold text-gray-800 tracking-tight flex flex-wrap items-center gap-2">
                         好奇心俱乐部
@@ -53,15 +408,14 @@ html_content = r'''<!DOCTYPE html>
                 <button type="button" onclick="startNewDay()" title="开启新一天的探索记录" class="bg-amber-100 hover:bg-amber-200 active:scale-95 text-amber-800 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer min-h-[42px]">
                     🌅 开启新的一天
                 </button>
-                <button type="button" onclick="openModelModal()" title="配置模型接口地址、对话模型与 API 密钥" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer min-h-[42px]">
+                <button type="button" onclick="openModelModal()" title="独立配置基础对话、视觉生图、兴趣世界三路并发 API" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer min-h-[42px]">
                     ⚙️ 模型设置
                     <span id="modelStatusDot" class="w-2 h-2 rounded-full bg-rose-400" title="未配置密钥"></span>
-                    <span id="modelShortLabel" class="text-[10px] font-normal text-slate-500 max-w-[95px] truncate">未配置</span>
+                    <span id="modelShortLabel" class="text-[10px] font-normal text-slate-500 max-w-[125px] truncate">待配置</span>
                 </button>
             </div>
         </div>
 
-        <!-- 右侧：每日奇遇动态插画横幅（每次打开自动生成不同绘本风插画，点击可换一幅） -->
         <div class="relative w-full lg:w-[430px] h-[94px] sm:h-[102px] rounded-2xl overflow-hidden border border-emerald-100/90 shadow-inner shrink-0 group cursor-pointer" onclick="cycleHeroBanner()" title="点一点换一幅今日奇遇插画">
             <canvas id="heroArtCanvas" width="860" height="204" class="w-full h-full object-cover"></canvas>
             <div class="absolute top-2 left-2.5 bg-white/85 backdrop-blur-xs px-2.5 py-0.5 rounded-full text-[11px] font-extrabold text-gray-800 shadow-2xs flex items-center gap-1">
@@ -79,58 +433,124 @@ html_content = r'''<!DOCTYPE html>
         </div>
     </header>
 
-    <!-- 模型设置独立弹窗（适配 iPad 触控与键盘） -->
+    <!-- 模型设置独立弹窗（三路业务场景独立并发路由） -->
     <div id="modelModal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-3">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-5 sm:p-6 border border-slate-200 max-h-[90vh] overflow-y-auto modal-scroll">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-5 sm:p-6 border border-slate-200 max-h-[92vh] overflow-y-auto modal-scroll">
             <div class="flex items-center justify-between pb-3 border-b border-gray-100">
                 <div class="flex items-center gap-2">
                     <span class="text-2xl">⚙️</span>
                     <div>
-                        <h2 class="text-base font-extrabold text-gray-800">模型与接口设置</h2>
-                        <p class="text-[11px] text-gray-500">密钥仅保存在当前设备浏览器本地，不会上传到代码仓库</p>
+                        <h2 class="text-base sm:text-lg font-extrabold text-gray-800">模型与接口设置（三路独立并发）</h2>
+                        <p class="text-[11px] text-gray-500">基础对话、视觉生图、兴趣世界各自独立配置 API 与模型，后台同时在线生效（密钥仅存本地浏览器）</p>
                     </div>
                 </div>
                 <button type="button" onclick="closeModelModal()" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-base font-bold flex items-center justify-center cursor-pointer">✕</button>
             </div>
 
-            <div class="space-y-3.5 mt-4 text-xs sm:text-sm">
-                <div>
-                    <label class="block font-bold text-gray-700 mb-1">API 接口地址（Base URL）</label>
-                    <input type="text" id="baseUrlInput" value="https://api.router.one/v1" placeholder="https://api.router.one/v1" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[44px]">
-                </div>
-
-                <div>
-                    <label class="block font-bold text-gray-700 mb-1">对话模型名称（Model ID）</label>
-                    <input type="text" id="modelInput" value="openai/gpt-5.6-luna" placeholder="例如：openai/gpt-5.6-luna 或 google/gemini-3-flash" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[44px]">
-                    <div class="flex flex-wrap gap-1.5 mt-1.5">
-                        <button type="button" onclick="fillQuickModel('openai/gpt-5.6-luna')" class="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-200 font-bold cursor-pointer">openai/gpt-5.6-luna</button>
-                        <button type="button" onclick="fillQuickModel('google/gemini-3-flash')" class="text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-200 font-bold cursor-pointer">google/gemini-3-flash</button>
+            <div class="space-y-4 mt-4 text-xs sm:text-sm">
+                <!-- 模块 1：基础对话 -->
+                <div class="bg-emerald-50/40 p-3.5 rounded-2xl border border-emerald-200 space-y-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-1.5">
+                        <div class="font-extrabold text-emerald-900 flex items-center gap-1.5">
+                            <span>🧭 1. 基础对话通道（今日基础探索）</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">必填 · 持续生效</span>
+                        </div>
+                        <button type="button" id="testChatBtn" onclick="testSingleRoute('chat')" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-300 font-bold cursor-pointer">⚡ 测试基础通道</button>
+                    </div>
+                    <p class="text-[11px] text-gray-600">负责日常四科探索出题与快速反馈，建议配置响应快、性价比高的主力模型。</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">API 接口地址（Base URL）</label>
+                            <input type="text" id="chatBaseUrlInput" placeholder="https://api.deepseek.com/v1" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[40px] text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">模型名称（Model ID）</label>
+                            <input type="text" id="chatModelInput" placeholder="deepseek-chat" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[40px] text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 mb-1">API 密钥（sk-...）</label>
+                        <input type="password" id="chatApiKeyInput" placeholder="输入基础对话通道 sk-... 密钥" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[40px] text-xs">
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" onclick="fillRoutePreset('chat', 'https://api.deepseek.com/v1', 'deepseek-chat')" class="text-[11px] bg-white hover:bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200 font-bold cursor-pointer">⚡ DeepSeek直连</button>
+                        <button type="button" onclick="fillRoutePreset('chat', 'https://ark.cn-beijing.volces.com/api/v3', 'doubao-seed-1-6-250615')" class="text-[11px] bg-white hover:bg-orange-50 text-orange-800 px-2.5 py-1 rounded-lg border border-orange-200 font-bold cursor-pointer">🔥 火山引擎</button>
+                        <button type="button" onclick="fillRoutePreset('chat', 'https://api.router.one/v1', 'deepseek/deepseek-chat')" class="text-[11px] bg-white hover:bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-200 font-bold cursor-pointer">RouterOne · DeepSeek</button>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block font-bold text-gray-700 mb-1">生图模型名称（选填，用于故事插图与封面）</label>
-                    <input type="text" id="imageModelInput" value="" placeholder="支持 /images/generations 的模型 ID，留空则不启用" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[44px]">
+                <!-- 模块 2：视觉生图 -->
+                <div class="bg-pink-50/40 p-3.5 rounded-2xl border border-pink-200 space-y-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-1.5">
+                        <div class="font-extrabold text-pink-900 flex items-center gap-1.5">
+                            <span>🎨 2. 视觉生图通道（故事插图与封面）</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-800">选填 · 独立生效</span>
+                        </div>
+                        <button type="button" onclick="copyRouteFromChat('image')" class="text-[11px] bg-white hover:bg-pink-100 text-pink-800 px-2.5 py-1 rounded-lg border border-pink-200 font-bold cursor-pointer">📋 复用基础通道地址与密钥</button>
+                    </div>
+                    <p class="text-[11px] text-gray-600">专用于绘制“今日奇遇封面”与“兴趣世界场景插图”，可填写独立生图网关与专用 Key（留空则不启用 AI 绘图）。</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">生图 API 接口地址（Base URL）</label>
+                            <input type="text" id="imageBaseUrlInput" placeholder="例如：https://api.router.one/v1" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-400 min-h-[40px] text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">生图模型名称（Model ID）</label>
+                            <input type="text" id="imageModelInput" placeholder="支持 /images/generations 的模型 ID" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-400 min-h-[40px] text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 mb-1">生图 API 密钥（sk-...，留空则自动尝试复用基础通道密钥）</label>
+                        <input type="password" id="imageApiKeyInput" placeholder="输入生图通道 sk-... 密钥（可选）" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-pink-400 min-h-[40px] text-xs">
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block font-bold text-gray-700 mb-1">API 密钥（sk-...）</label>
-                    <input type="password" id="apiKeyInput" placeholder="输入 sk-... 密钥" class="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 min-h-[44px]">
+                <!-- 模块 3：兴趣世界高阶模型 -->
+                <div class="bg-purple-50/50 p-3.5 rounded-2xl border border-purple-200 space-y-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-1.5">
+                        <div class="font-extrabold text-purple-900 flex items-center gap-1.5">
+                            <span>✨ 3. 兴趣世界专项通道（高阶故事与推理）</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">选填 · 自动回退基础通道</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="copyRouteFromChat('interest')" class="text-[11px] bg-white hover:bg-purple-100 text-purple-800 px-2 py-1 rounded-lg border border-purple-200 font-bold cursor-pointer">📋 复用地址与密钥</button>
+                            <button type="button" id="testInterestBtn" onclick="testSingleRoute('interest')" class="text-[11px] bg-white hover:bg-purple-100 text-purple-800 px-2 py-1 rounded-lg border border-purple-300 font-bold cursor-pointer">⚡ 测试兴趣通道</button>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-600">进入【兴趣世界】时自动激活此通道，可挂载逻辑推理与故事创作更强的旗舰模型；若留空则自动使用第 1 路基础对话通道。</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">兴趣世界 API 地址（Base URL）</label>
+                            <input type="text" id="interestBaseUrlInput" placeholder="例如：https://api.router.one/v1" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[40px] text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-700 mb-1">高阶模型名称（Model ID）</label>
+                            <input type="text" id="interestModelInput" placeholder="例如：gemini-2.5-pro / qwen/qwen-max" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[40px] text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-gray-700 mb-1">兴趣世界 API 密钥（sk-...）</label>
+                        <input type="password" id="interestApiKeyInput" placeholder="输入兴趣世界通道 sk-... 密钥（可选）" class="w-full px-3 py-2 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[40px] text-xs">
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" onclick="fillRoutePreset('interest', 'https://api.router.one/v1', 'google/gemini-2.5-pro')" class="text-[11px] bg-white hover:bg-purple-100 text-purple-800 px-2.5 py-1 rounded-lg border border-purple-200 font-bold cursor-pointer">RouterOne · Gemini Pro</button>
+                        <button type="button" onclick="fillRoutePreset('interest', 'https://api.router.one/v1', 'qwen/qwen-max')" class="text-[11px] bg-white hover:bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-200 font-bold cursor-pointer">RouterOne · 通义千问Max</button>
+                        <button type="button" onclick="fillRoutePreset('interest', 'https://ark.cn-beijing.volces.com/api/v3', 'doubao-seed-1-6-250615')" class="text-[11px] bg-white hover:bg-orange-50 text-orange-800 px-2.5 py-1 rounded-lg border border-orange-200 font-bold cursor-pointer">🔥 火山引擎</button>
+                    </div>
                 </div>
 
                 <div id="modelSaveFeedback" class="hidden bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2 rounded-xl text-xs font-bold">
-                    ✅ 模型配置已成功保存！
+                    ✅ 三路独立通道配置已保存并同时生效！
                 </div>
             </div>
 
-            <div class="mt-5 flex justify-end gap-2.5">
+            <div class="mt-5 flex items-center justify-end gap-2.5">
                 <button type="button" onclick="closeModelModal()" class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer min-h-[44px]">取消</button>
-                <button type="button" onclick="saveApiConfig()" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer min-h-[44px]">保存配置</button>
+                <button type="button" onclick="saveApiConfig()" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer min-h-[44px]">保存全部通道配置</button>
             </div>
         </div>
     </div>
 
-    <!-- 家长后台设定弹窗（年级/学期/单元/课次级联下拉 + Lv.1~Lv.10 难度说明与手动选择） -->
     <div id="parentModal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4">
         <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 border border-indigo-100 max-h-[92vh] overflow-y-auto modal-scroll">
             <div class="flex items-center justify-between pb-3 border-b border-gray-100">
@@ -145,7 +565,6 @@ html_content = r'''<!DOCTYPE html>
             </div>
 
             <div class="space-y-4 mt-4 text-xs sm:text-sm">
-                <!-- 1. 孩子年龄、年级与学期 -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="block font-bold text-gray-700 mb-1">孩子年龄（岁）</label>
@@ -171,14 +590,12 @@ html_content = r'''<!DOCTYPE html>
                     </div>
                 </div>
 
-                <!-- 2. 各学科课本进度（单元 + 课次级联下拉 + 补充备注） -->
                 <div class="bg-indigo-50/60 p-3.5 rounded-2xl border border-indigo-100 space-y-3">
                     <div class="font-bold text-indigo-900 flex flex-wrap items-center justify-between gap-1">
                         <span>📚 各学科当前课本进度（AI 出题精准依据）</span>
-                        <span class="text-[11px] font-normal text-indigo-600">先选单元与课次，可再补充细节</span>
+                        <span class="text-[11px] font-normal text-indigo-600">选定课次及本学期之前所有已学单元都会纳入考核</span>
                     </div>
 
-                    <!-- 数学 -->
                     <div class="bg-white p-3 rounded-xl border border-blue-100 space-y-2">
                         <div class="font-bold text-blue-700 flex items-center justify-between">
                             <span>📐 数学课本进度</span>
@@ -191,7 +608,6 @@ html_content = r'''<!DOCTYPE html>
                         <input type="text" id="noteInput-数学" placeholder="补充重点（选填，如：多位数乘一位数连续进位、长方形周长应用）" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[40px]">
                     </div>
 
-                    <!-- 语文 -->
                     <div class="bg-white p-3 rounded-xl border border-rose-100 space-y-2">
                         <div class="font-bold text-rose-700 flex items-center justify-between">
                             <span>📖 语文课本进度</span>
@@ -204,7 +620,6 @@ html_content = r'''<!DOCTYPE html>
                         <input type="text" id="noteInput-语文" placeholder="补充重点（选填，如：多音字辨析、比喻拟人句、古诗理解）" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-400 min-h-[40px]">
                     </div>
 
-                    <!-- 英语 -->
                     <div class="bg-white p-3 rounded-xl border border-purple-100 space-y-2">
                         <div class="font-bold text-purple-700 flex items-center justify-between">
                             <span>🔤 英语课本进度</span>
@@ -217,7 +632,6 @@ html_content = r'''<!DOCTYPE html>
                         <input type="text" id="noteInput-英语" placeholder="补充重点（选填，如：颜色与动物词汇、What's this 句型问答）" class="w-full px-3 py-2 border border-gray-200 rounded-xl text-xs bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-400 min-h-[40px]">
                     </div>
 
-                    <!-- 科学 -->
                     <div class="bg-white p-3 rounded-xl border border-emerald-100 space-y-2">
                         <div class="font-bold text-emerald-700 flex items-center justify-between">
                             <span>🔬 科学课本进度</span>
@@ -231,7 +645,6 @@ html_content = r'''<!DOCTYPE html>
                     </div>
                 </div>
 
-                <!-- 3. 难度阶梯自由选择（Lv.1 ~ Lv.10，附带每档详细说明） -->
                 <div class="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 space-y-2">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <label for="parentLevelSelect" class="font-extrabold text-amber-900">📈 题目难度阶梯自由选择（Lv.1 ~ Lv.10）</label>
@@ -241,7 +654,6 @@ html_content = r'''<!DOCTYPE html>
                     <div id="levelDetailBox" class="bg-white/90 border border-amber-200 rounded-xl p-2.5 text-xs text-gray-700 leading-relaxed"></div>
                 </div>
 
-                <!-- 保存同步提示条 -->
                 <div id="parentSaveFeedback" class="hidden bg-emerald-50 border border-emerald-300 text-emerald-800 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2">
                     <span>✅ 已保存并同步给布谷老师！后续题目将立即按新进度与新难度生成。</span>
                 </div>
@@ -254,23 +666,16 @@ html_content = r'''<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- 主工作区：左侧贪吃蛇尼克成长路径 + 右侧双模式探索台 -->
     <div class="relative z-10 w-full max-w-6xl flex flex-col lg:flex-row gap-3 my-2.5 flex-1 items-stretch">
-        
-        <!-- 左侧：贪吃蛇尼克成长与四科果实面板 -->
         <aside class="lg:w-80 bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-lg flex flex-col justify-between border border-white/60">
             <div>
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-0.5 rounded-full">🐍 探索伙伴 · 贪吃蛇尼克</span>
                     <span id="snakeMoodLabel" class="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">状态：等待出发</span>
                 </div>
-                
-                <!-- 尼克对话气泡 -->
                 <p id="snakeBubble" class="text-xs text-gray-700 bg-emerald-50/90 border border-emerald-100 p-2.5 rounded-xl mb-2.5 leading-relaxed text-center">
-                    “嗨！我是贪吃蛇尼克！路径上有数学、语文、英语、科学4颗能量果实，每完成一门探索我就会向前爬行并变长一节哦！”
+                    “嗨！我是贪吃蛇尼克！路径上有数学、语文、英语、科学4颗能量果实，每答对3题完成一门探索，我就会向前爬行并变长一节哦！”
                 </p>
-
-                <!-- Canvas 画布：连续弯曲路径 + 4颗学科果实 + 尼克实时移动伸长 -->
                 <div class="relative w-full bg-gradient-to-b from-amber-50/50 via-emerald-50/40 to-teal-50/60 rounded-2xl border border-emerald-100/80 overflow-hidden shadow-inner flex items-center justify-center cursor-pointer" onclick="snakeInteract()" title="点一点贪吃蛇尼克">
                     <canvas id="snakeCanvas" width="260" height="285" class="w-full h-[270px] object-contain"></canvas>
                     <div class="absolute bottom-2 left-2.5 text-[11px] font-bold text-amber-700 bg-white/90 px-2 py-0.5 rounded-md shadow-2xs">
@@ -280,8 +685,6 @@ html_content = r'''<!DOCTYPE html>
                         🌿 尼克身长：<span id="snakeSegmentsText">4</span> 节
                     </div>
                 </div>
-
-                <!-- 四科果实点亮状态徽章条 -->
                 <div class="grid grid-cols-4 gap-1.5 mt-2.5 text-center text-[11px] font-bold">
                     <div id="badge-数学" class="py-1 px-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 transition">📐 数学</div>
                     <div id="badge-语文" class="py-1 px-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 transition">📖 语文</div>
@@ -289,12 +692,10 @@ html_content = r'''<!DOCTYPE html>
                     <div id="badge-科学" class="py-1 px-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 transition">🔬 科学</div>
                 </div>
             </div>
-
-            <!-- 底部今日状态与语音朗读开关 -->
             <div class="flex flex-col w-full gap-2 mt-3 pt-2.5 border-t border-gray-100">
                 <div class="bg-gray-50 rounded-xl p-2 text-[11px] text-gray-600 flex items-center justify-between">
                     <span>当前探索：</span>
-                    <span id="todayTopicDisplay" class="font-bold text-emerald-700 truncate max-w-[150px]">尚未选定学科</span>
+                    <span id="todayTopicDisplay" class="font-bold text-emerald-700 truncate max-w-[165px]">尚未选定学科</span>
                 </div>
                 <button type="button" id="ttsToggleBtn" onclick="toggleTTS()" class="w-full py-2 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition cursor-pointer min-h-[40px]">
                     🔊 布谷老师朗读：已开启
@@ -302,12 +703,8 @@ html_content = r'''<!DOCTYPE html>
             </div>
         </aside>
 
-        <!-- 右侧：基础探索区 & 兴趣自由探索区 -->
         <main id="mainWorkbench" class="flex-1 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl flex flex-col h-[72vh] lg:h-[76vh] overflow-hidden border border-white/60 transition-colors duration-500">
-            
-            <!-- 模式切换栏 + 学科/功能快捷入口 -->
             <div class="bg-gray-50/95 px-3 py-2 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
-                <!-- 双空间切换 -->
                 <div class="flex items-center gap-1.5 bg-gray-200/70 p-1 rounded-xl text-xs font-bold">
                     <button type="button" id="tabBaseBtn" onclick="switchMode('base')" class="tab-active px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[38px]">
                         🧭 今日基础探索
@@ -317,7 +714,6 @@ html_content = r'''<!DOCTYPE html>
                     </button>
                 </div>
 
-                <!-- 学科入口 & 今日成长卡 -->
                 <div id="baseSubjectBar" class="flex items-center gap-1.5 text-xs font-bold overflow-x-auto">
                     <button type="button" id="btnSub-数学" onclick="startSubjectExplore('数学')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[38px]">📐 数学</button>
                     <button type="button" id="btnSub-语文" onclick="startSubjectExplore('语文')" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[38px]">📖 语文</button>
@@ -328,7 +724,6 @@ html_content = r'''<!DOCTYPE html>
                     </button>
                 </div>
 
-                <!-- 兴趣世界顶部操作 -->
                 <div id="interestTopBar" class="hidden items-center gap-1.5 text-xs font-bold flex-wrap">
                     <button type="button" onclick="toggleInterestWorldDrawer()" class="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1.5 rounded-xl transition cursor-pointer min-h-[38px]">🗺️ 更换故事主题</button>
                     <button type="button" onclick="requestStoryIllustration()" class="bg-pink-500 hover:bg-pink-600 text-white px-3 py-1.5 rounded-xl shadow-2xs transition cursor-pointer min-h-[38px]">🎨 为故事配插图</button>
@@ -336,7 +731,6 @@ html_content = r'''<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- 兴趣世界主题选择与进阶探索面板 -->
             <div id="interestWorldPanel" class="hidden bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 px-4 py-3 border-b border-purple-100">
                 <div class="flex items-center justify-between mb-2">
                     <span id="interestAtmosphereBanner" class="text-[11px] font-bold text-purple-900">✨ 兴趣世界说明：集齐4科能量果实后解锁！在这里布谷老师会结合你学过的知识，带你向更深、更有挑战的拓展领域探险，也可以自由提问和编故事。</span>
@@ -367,12 +761,28 @@ html_content = r'''<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- 聊天与探索滚动区 -->
+            <!-- 左边对话框顶部实时答题计数联动条 -->
+            <div id="leftQuizCounterBar" class="bg-gradient-to-r from-emerald-50/90 via-amber-50/70 to-indigo-50/80 px-4 py-2 border-b border-emerald-100/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span id="leftCurrentSubjectPill" class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold">当前学科：未选定</span>
+                    <span id="leftSubjectCorrectText" class="font-bold text-gray-700">本科正确：<strong class="text-emerald-700">0 / 3</strong> 题</span>
+                    <span class="text-gray-300">|</span>
+                    <span id="leftTotalFruitsText" class="font-bold text-amber-800">累计正确果实：<strong class="text-amber-700">0 / 4</strong> 颗</span>
+                </div>
+                <div id="leftUtilityActionBar" class="flex items-center gap-1.5">
+                    <button type="button" id="hintQuestionBtn" onclick="requestQuestionHint()" class="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 px-3 py-1 rounded-xl text-xs font-bold shadow-2xs transition cursor-pointer min-h-[34px]">
+                        💡 提示
+                    </button>
+                    <button type="button" id="swapQuestionBtn" onclick="swapCurrentQuestion()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 border border-indigo-300 px-3 py-1 rounded-xl text-xs font-bold shadow-2xs transition cursor-pointer min-h-[34px]">
+                        🔄 换一题
+                    </button>
+                </div>
+            </div>
+
             <div id="chatContainer" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
 
-            <!-- 基础学科节点结束确认条 -->
             <div id="dailyConfirmBar" class="hidden px-4 py-2.5 bg-amber-50 border-t border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-2">
-                <span id="dailyConfirmText" class="text-xs font-bold text-amber-900">🌟 太棒了！你已经完成了当前学科的核心探索，要让尼克吃掉这颗能量果实吗？</span>
+                <span id="dailyConfirmText" class="text-xs font-bold text-amber-900">🌟 太棒了！你已经答对 3 道题完成了当前学科探索，要让尼克吃掉这颗能量果实吗？</span>
                 <div class="flex gap-2 shrink-0">
                     <button type="button" id="eatFruitConfirmBtn" onclick="confirmEatSubjectFruit()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs cursor-pointer min-h-[42px]">
                         🍎 吃掉果实，继续下一科
@@ -383,20 +793,18 @@ html_content = r'''<!DOCTYPE html>
                 </div>
             </div>
 
-            <!-- 兴趣世界阶段结束节点提示条 -->
             <div id="interestNodeBar" class="hidden px-4 py-2.5 bg-purple-50 border-t border-purple-200 flex flex-col sm:flex-row items-center justify-between gap-2">
-                <span id="interestNodeText" class="text-xs font-bold text-purple-900">🧭 冒险节点达成！你已经解开了这一阶段的奥秘，接下来你想怎么选？</span>
+                <span id="interestNodeText" class="text-xs font-bold text-purple-900">🎉 你已经完成本轮 5 个故事关卡！要继续挑战下一组关卡，还是结束本次故事探险？</span>
                 <div class="flex gap-2 shrink-0">
                     <button type="button" onclick="continueInterestDeepExplore()" class="bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs cursor-pointer min-h-[42px]">
-                        🚀 继续深入，挑战更高难度
+                        🚀 继续挑战
                     </button>
                     <button type="button" onclick="finishInterestSession()" class="bg-white hover:bg-purple-100 text-purple-800 border border-purple-300 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer min-h-[42px]">
-                        🏁 结束本次探险并生成总结
+                        🏁 结束本次
                     </button>
                 </div>
             </div>
 
-            <!-- 图片预览暂存条 -->
             <div id="imagePreviewBar" class="hidden px-4 py-2 bg-blue-50/90 border-t border-blue-100 flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2.5">
                     <img id="pendingImageThumb" src="" alt="待发送图片" class="w-12 h-12 object-cover rounded-lg border border-blue-200 shadow-2xs">
@@ -408,28 +816,22 @@ html_content = r'''<!DOCTYPE html>
                 <button type="button" onclick="clearPendingImage()" class="text-xs text-gray-500 hover:text-rose-600 px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 cursor-pointer">取消图片 ✕</button>
             </div>
 
-            <!-- 快捷选项胶囊栏（固定在对话框正上方，横向大按钮方便 iPad 触控点选） -->
             <div id="quickChoiceBar" class="hidden px-3 py-2.5 bg-gradient-to-r from-slate-50 via-white to-slate-50 border-t border-gray-100 flex flex-wrap items-center justify-center gap-2 sm:gap-3 shadow-2xs"></div>
 
-            <!-- 语音识别状态与修改确认条 -->
             <div id="voiceStatusBar" class="hidden px-4 py-2 bg-rose-50 border-t border-rose-100 flex items-center justify-between gap-2 text-xs">
                 <span id="voiceStatusText" class="text-rose-700 font-bold flex items-center gap-1.5">🎙️ 正在聆听你的声音...</span>
                 <button type="button" onclick="stopVoiceRecognition()" class="bg-rose-500 text-white px-3 py-1.5 rounded-lg font-bold cursor-pointer">完成说话</button>
             </div>
 
-            <!-- 底部输入、图片上传与语音区 -->
             <div class="p-2.5 sm:p-3 bg-white border-t border-gray-100 flex items-center gap-2">
                 <input type="file" id="imageFileInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
                 <button type="button" onclick="document.getElementById('imageFileInput').click()" title="上传照片、画作或自然观察图片" class="w-11 h-11 shrink-0 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center text-lg transition cursor-pointer">
                     📷
                 </button>
-
                 <button type="button" id="micBtn" onclick="toggleVoiceInput()" title="点击说话（识别后可修改再发送；iPad 也可用键盘自带听写）" class="w-11 h-11 shrink-0 rounded-xl bg-gray-100 hover:bg-emerald-100 text-gray-700 hover:text-emerald-700 flex items-center justify-center text-lg transition cursor-pointer">
                     🎤
                 </button>
-
                 <input type="text" id="userInput" placeholder="直接点选项按钮，或用 iPad 键盘/语音输入..." class="flex-1 px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm sm:text-base bg-gray-50 min-h-[44px]" onkeypress="handleKeyPress(event)">
-                
                 <button type="button" id="sendBtn" onclick="sendMessage()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition shrink-0 cursor-pointer min-h-[44px]">
                     发送 🚀
                 </button>
@@ -437,16 +839,15 @@ html_content = r'''<!DOCTYPE html>
         </main>
     </div>
 
-    <footer class="relative z-10 text-white/90 text-[11px] text-center drop-shadow-xs">
+    <footer class="relative z-10 text-gray-700 font-medium text-[11px] text-center bg-white/75 backdrop-blur-xs px-4 py-1 rounded-full shadow-2xs">
         💡 好奇心俱乐部 · 布谷老师与贪吃蛇尼克陪伴探索（支持 iPad Safari 添加到主屏幕全屏使用）
     </footer>
 
     <script>
-        // ==================== 1. 动态背景与顶部每日奇遇插画横幅 ====================
         const THEMES = [
-            { name: "森林晨光", bg: "from-teal-500 via-emerald-600 to-cyan-700", badge: "🌿", particleColor: "rgba(255,255,255,0.35)" },
-            { name: "奇幻星海", bg: "from-indigo-500 via-purple-600 to-blue-700", badge: "✨", particleColor: "rgba(255,255,220,0.4)" },
-            { name: "暖阳花谷", bg: "from-emerald-500 via-teal-600 to-indigo-600", badge: "🦋", particleColor: "rgba(255,255,255,0.4)" }
+            { name: "草莓蜜桃马卡龙", bg: "from-pink-200 via-amber-100 to-sky-200", badge: "🍬", particleColor: "rgba(255,255,255,0.65)" },
+            { name: "薄荷柠檬马卡龙", bg: "from-emerald-200 via-yellow-100 to-purple-200", badge: "🧁", particleColor: "rgba(255,250,240,0.7)" },
+            { name: "香芋奶油马卡龙", bg: "from-purple-200 via-rose-100 to-teal-200", badge: "🌈", particleColor: "rgba(255,255,255,0.65)" }
         ];
         const currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
         document.getElementById("mainBody").classList.add("bg-gradient-to-br", ...currentTheme.bg.split(" "));
@@ -459,26 +860,33 @@ html_content = r'''<!DOCTYPE html>
         window.addEventListener("resize", resizeBg);
         resizeBg();
 
-        for (let i = 0; i < 22; i++) {
+        const MACARON_BUBBLE_COLORS = [
+            "rgba(255, 182, 193, 0.42)",
+            "rgba(255, 223, 186, 0.45)",
+            "rgba(186, 255, 201, 0.42)",
+            "rgba(186, 225, 255, 0.45)",
+            "rgba(224, 187, 228, 0.42)"
+        ];
+        for (let i = 0; i < 24; i++) {
             bgParticles.push({
                 x: Math.random() * bgCanvas.width, y: Math.random() * bgCanvas.height,
-                r: Math.random() * 4 + 2, vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35
+                r: Math.random() * 8 + 4, vx: (Math.random() - 0.5) * 0.35, vy: (Math.random() - 0.5) * 0.35,
+                color: MACARON_BUBBLE_COLORS[i % MACARON_BUBBLE_COLORS.length]
             });
         }
         function animateBg() {
             bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-            bgCtx.fillStyle = currentTheme.particleColor;
             bgParticles.forEach(p => {
                 p.x += p.vx; p.y += p.vy;
                 if (p.x < 0 || p.x > bgCanvas.width) p.vx *= -1;
                 if (p.y < 0 || p.y > bgCanvas.height) p.vy *= -1;
+                bgCtx.fillStyle = p.color;
                 bgCtx.beginPath(); bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2); bgCtx.fill();
             });
             requestAnimationFrame(animateBg);
         }
         animateBg();
 
-        // 顶部每日奇遇插画横幅（内置 4 幅绘本矢量动画场景，每次打开随机一幅）
         const HERO_SCENES = [
             { id: "space", icon: "🚀", title: "今日奇遇 · 星空探索号" },
             { id: "dino", icon: "🦕", title: "今日奇遇 · 史前恐龙山谷" },
@@ -620,7 +1028,6 @@ html_content = r'''<!DOCTYPE html>
         updateHeroBannerLabel();
         renderHeroBannerCanvas();
 
-        // ==================== 2. 课程知识库（年级 -> 学期 -> 单元 -> 课次）与难度阶梯说明 ====================
         const DIFFICULTY_LEVELS = [
             { lv: 1, title: "Lv.1 · 课内基础启蒙", desc: "直接对应课本例题水平，单步思考即可得出结果，干扰项与正确答案差异明显，建立信心。" },
             { lv: 2, title: "Lv.2 · 课内稳固练习", desc: "紧扣本课核心概念，需要 1~2 步简单转换或理解关键词，干扰项为常见粗心点。" },
@@ -1020,25 +1427,27 @@ html_content = r'''<!DOCTYPE html>
                     ],
                     "科学": [
                         { unit: "第一单元·小小工程师", lessons: ["1. 了解我们的住房", "2. 认识工程", "3. 建造塔台", "4. 设计塔台模型", "5. 制作塔台模型", "6. 测试塔台模型", "7. 评估改进塔台模型"] },
-                        { unit: "第二单元·生物的多样性", lessons: ["1. 校园生物大搜索", "2. 制作校园生物分布图", "3. 形形色色的植物", "4. 多种多样的动物", "5. 相貌各异的我们", "6. 古代生物的多样性", "7. 保护生物多样性"] },
+                        { unit: "第二单元·生物的多样性", lessons: ["1. 校园生物大搜索", "2. 制作校园生物分布图", "3. 形形形色的植物", "4. 多种多样的动物", "5. 相貌各异的我们", "6. 古代生物的多样性", "7. 保护生物多样性"] },
                         { unit: "第三单元·宇宙", lessons: ["1. 太阳系大家庭", "2. 八颗行星", "3. 日食", "4. 认识星座", "5. 夏季星空", "6. 浩瀚的宇宙"] }
                     ]
                 }
             }
         };
 
-        // ==================== 3. 独立状态管理系统 ====================
         const STORAGE_KEYS = {
             API_KEY: "ro_api_key",
             BASE_URL: "ro_base_url",
             MODEL: "ro_model",
             IMAGE_MODEL: "ro_image_model",
-            DAILY_STATE: "cc_daily_state_v3",
-            SNAKE_STATE: "cc_snake_state_v3",
-            STORY_STATE: "cc_story_state_v3",
-            LEARNER_PROFILE: "cc_learner_profile_v3",
-            BASE_CHAT: "cc_base_chat_v3",
-            INTEREST_CHAT: "cc_interest_chat_v3"
+            CHANNELS: "cc_model_channels_v1",
+            ACTIVE_CHANNEL: "cc_active_channel_v1",
+            ROUTES_CONFIG: "cc_routes_config_v2",
+            DAILY_STATE: "cc_daily_state_v7",
+            SNAKE_STATE: "cc_snake_state_v4",
+            STORY_STATE: "cc_story_state_v5",
+            LEARNER_PROFILE: "cc_learner_profile_v7",
+            BASE_CHAT: "cc_base_chat_v7",
+            INTEREST_CHAT: "cc_interest_chat_v5"
         };
 
         const SUBJECT_NODES = [
@@ -1067,8 +1476,11 @@ html_content = r'''<!DOCTYPE html>
             status: "NOT_STARTED",
             currentSubject: "",
             subjectTurns: { "数学": 0, "语文": 0, "英语": 0, "科学": 0 },
+            subjectCorrectCount: { "数学": 0, "语文": 0, "英语": 0, "科学": 0 },
             completedSubjects: [],
-            growthCardUnlocked: false
+            growthCardUnlocked: false,
+            activeQuiz: null,
+            askedQuestions: { "数学": [], "语文": [], "英语": [], "科学": [] }
         };
 
         let snakeState = {
@@ -1091,6 +1503,8 @@ html_content = r'''<!DOCTYPE html>
             storyProgress: "",
             depthStage: 1,
             stageTurns: 0,
+            questCount: 0,
+            questTarget: 5,
             waitingNodeChoice: false
         };
 
@@ -1135,26 +1549,216 @@ html_content = r'''<!DOCTYPE html>
             return SUBJECT_NODES[count - 1].t;
         }
 
+        // ==================== 三路业务场景独立并发路由管理器 ====================
+        let routeConfigs = {
+            chat: {
+                baseUrl: "https://api.deepseek.com/v1",
+                model: "deepseek-chat",
+                apiKey: ""
+            },
+            image: {
+                baseUrl: "",
+                model: "",
+                apiKey: ""
+            },
+            interest: {
+                baseUrl: "",
+                model: "",
+                apiKey: ""
+            }
+        };
+
+        function loadRouteConfigs() {
+            let loaded = null;
+            try {
+                loaded = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUTES_CONFIG));
+            } catch (e) {}
+
+            if (loaded && typeof loaded === "object" && loaded.chat) {
+                routeConfigs = {
+                    chat: {
+                        baseUrl: (loaded.chat.baseUrl || "https://api.deepseek.com/v1").replace(/\/+$/, ""),
+                        model: loaded.chat.model || "deepseek-chat",
+                        apiKey: loaded.chat.apiKey || ""
+                    },
+                    image: {
+                        baseUrl: (loaded.image?.baseUrl || "").replace(/\/+$/, ""),
+                        model: loaded.image?.model || "",
+                        apiKey: loaded.image?.apiKey || ""
+                    },
+                    interest: {
+                        baseUrl: (loaded.interest?.baseUrl || "").replace(/\/+$/, ""),
+                        model: loaded.interest?.model || "",
+                        apiKey: loaded.interest?.apiKey || ""
+                    }
+                };
+            } else {
+                let legacyBase = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.deepseek.com/v1";
+                let legacyModel = localStorage.getItem(STORAGE_KEYS.MODEL) || "deepseek-chat";
+                let legacyKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || "";
+                let legacyImgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || "";
+                let ch2 = null;
+
+                try {
+                    const oldChannels = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHANNELS));
+                    const oldIdx = parseInt(localStorage.getItem(STORAGE_KEYS.ACTIVE_CHANNEL) || "0", 10);
+                    if (Array.isArray(oldChannels) && oldChannels.length > 0) {
+                        const activeCh = oldChannels[oldIdx] || oldChannels[0];
+                        if (activeCh) {
+                            legacyBase = activeCh.baseUrl || legacyBase;
+                            legacyModel = activeCh.model || legacyModel;
+                            legacyKey = activeCh.apiKey || legacyKey;
+                            legacyImgModel = activeCh.imageModel || legacyImgModel;
+                        }
+                        if (oldChannels.length > 1) {
+                            const otherCh = oldChannels.find((_, i) => i !== oldIdx);
+                            if (otherCh && (otherCh.apiKey || otherCh.model)) {
+                                ch2 = otherCh;
+                            }
+                        }
+                    }
+                } catch (e) {}
+
+                routeConfigs = {
+                    chat: {
+                        baseUrl: legacyBase.replace(/\/+$/, ""),
+                        model: legacyModel,
+                        apiKey: legacyKey
+                    },
+                    image: {
+                        baseUrl: legacyImgModel ? legacyBase.replace(/\/+$/, "") : "",
+                        model: legacyImgModel,
+                        apiKey: legacyImgModel ? legacyKey : ""
+                    },
+                    interest: {
+                        baseUrl: ch2 ? (ch2.baseUrl || "").replace(/\/+$/, "") : "",
+                        model: ch2 ? (ch2.model || "") : "",
+                        apiKey: ch2 ? (ch2.apiKey || "") : ""
+                    }
+                };
+                persistRouteConfigs();
+            }
+        }
+
+        function persistRouteConfigs() {
+            localStorage.setItem(STORAGE_KEYS.ROUTES_CONFIG, JSON.stringify(routeConfigs));
+            localStorage.setItem(STORAGE_KEYS.API_KEY, routeConfigs.chat.apiKey || "");
+            localStorage.setItem(STORAGE_KEYS.BASE_URL, routeConfigs.chat.baseUrl || "https://api.deepseek.com/v1");
+            localStorage.setItem(STORAGE_KEYS.MODEL, routeConfigs.chat.model || "deepseek-chat");
+            localStorage.setItem(STORAGE_KEYS.IMAGE_MODEL, routeConfigs.image.model || "");
+        }
+
+        function getResolvedRouteConfig(routeType) {
+            if (!routeConfigs.chat) loadRouteConfigs();
+            const chatCfg = routeConfigs.chat;
+
+            if (routeType === "image") {
+                const imgCfg = routeConfigs.image || {};
+                const resolvedModel = (imgCfg.model || "").trim();
+                const resolvedBase = ((imgCfg.baseUrl || "").trim() || chatCfg.baseUrl || "https://api.deepseek.com/v1").replace(/\/+$/, "");
+                const resolvedKey = (imgCfg.apiKey || "").trim() || (chatCfg.apiKey || "").trim();
+                return {
+                    baseUrl: resolvedBase,
+                    model: resolvedModel,
+                    apiKey: resolvedKey,
+                    isConfigured: Boolean(resolvedModel && resolvedKey)
+                };
+            }
+
+            if (routeType === "interest") {
+                const intCfg = routeConfigs.interest || {};
+                const hasDedicatedModel = Boolean((intCfg.model || "").trim());
+                const hasDedicatedKey = Boolean((intCfg.apiKey || "").trim());
+                const hasDedicatedBase = Boolean((intCfg.baseUrl || "").trim());
+                if (hasDedicatedModel || hasDedicatedKey || hasDedicatedBase) {
+                    return {
+                        baseUrl: (intCfg.baseUrl || chatCfg.baseUrl || "https://api.deepseek.com/v1").replace(/\/+$/, ""),
+                        model: intCfg.model || chatCfg.model || "deepseek-chat",
+                        apiKey: intCfg.apiKey || chatCfg.apiKey || "",
+                        isDedicated: true
+                    };
+                }
+            }
+
+            return {
+                baseUrl: (chatCfg.baseUrl || "https://api.deepseek.com/v1").replace(/\/+$/, ""),
+                model: chatCfg.model || "deepseek-chat",
+                apiKey: chatCfg.apiKey || "",
+                isDedicated: false
+            };
+        }
+
+        function populateFormFromRouteConfigs() {
+            document.getElementById("chatBaseUrlInput").value = routeConfigs.chat.baseUrl || "https://api.deepseek.com/v1";
+            document.getElementById("chatModelInput").value = routeConfigs.chat.model || "deepseek-chat";
+            document.getElementById("chatApiKeyInput").value = routeConfigs.chat.apiKey ? "********" : "";
+
+            document.getElementById("imageBaseUrlInput").value = routeConfigs.image.baseUrl || "";
+            document.getElementById("imageModelInput").value = routeConfigs.image.model || "";
+            document.getElementById("imageApiKeyInput").value = routeConfigs.image.apiKey ? "********" : "";
+
+            document.getElementById("interestBaseUrlInput").value = routeConfigs.interest.baseUrl || "";
+            document.getElementById("interestModelInput").value = routeConfigs.interest.model || "";
+            document.getElementById("interestApiKeyInput").value = routeConfigs.interest.apiKey ? "********" : "";
+        }
+
+        function fillRoutePreset(routeType, baseUrl, modelId) {
+            if (routeType === "chat") {
+                document.getElementById("chatBaseUrlInput").value = baseUrl;
+                document.getElementById("chatModelInput").value = modelId;
+            } else if (routeType === "image") {
+                document.getElementById("imageBaseUrlInput").value = baseUrl;
+                document.getElementById("imageModelInput").value = modelId;
+            } else if (routeType === "interest") {
+                document.getElementById("interestBaseUrlInput").value = baseUrl;
+                document.getElementById("interestModelInput").value = modelId;
+            }
+        }
+
+        function copyRouteFromChat(targetRoute) {
+            const chatBase = document.getElementById("chatBaseUrlInput").value.trim() || routeConfigs.chat.baseUrl || "";
+            const chatKeyInput = document.getElementById("chatApiKeyInput").value.trim();
+            const actualChatKey = (chatKeyInput && !chatKeyInput.includes("*")) ? chatKeyInput : routeConfigs.chat.apiKey;
+
+            if (targetRoute === "image") {
+                document.getElementById("imageBaseUrlInput").value = chatBase;
+                if (actualChatKey) {
+                    routeConfigs.image.apiKey = actualChatKey;
+                    document.getElementById("imageApiKeyInput").value = "********";
+                }
+            } else if (targetRoute === "interest") {
+                document.getElementById("interestBaseUrlInput").value = chatBase;
+                if (actualChatKey) {
+                    routeConfigs.interest.apiKey = actualChatKey;
+                    document.getElementById("interestApiKeyInput").value = "********";
+                }
+            }
+        }
+
         function updateModelStatusUI() {
-            const savedKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || "";
-            const savedModel = localStorage.getItem(STORAGE_KEYS.MODEL) || "openai/gpt-5.6-luna";
-            const savedImgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || "";
+            const chatCfg = getResolvedRouteConfig("chat");
+            const imgCfg = getResolvedRouteConfig("image");
+            const intCfg = getResolvedRouteConfig("interest");
+
             const dot = document.getElementById("modelStatusDot");
             const label = document.getElementById("modelShortLabel");
             const aiPaintBtn = document.getElementById("aiHeroPaintBtn");
 
-            if (savedKey) {
+            if (chatCfg.apiKey) {
                 dot.className = "w-2 h-2 rounded-full bg-emerald-500";
-                dot.title = "密钥已配置";
-                const shortName = savedModel.includes("/") ? savedModel.split("/")[1] : savedModel;
-                label.innerText = shortName;
+                const activeTags = ["基础"];
+                if (imgCfg.isConfigured) activeTags.push("生图");
+                if (intCfg.isDedicated) activeTags.push("兴趣");
+                dot.title = `已启用通道：${activeTags.join(" + ")}`;
+                const shortName = chatCfg.model.includes("/") ? chatCfg.model.split("/")[1] : chatCfg.model;
+                label.innerText = activeTags.length > 1 ? `${activeTags.join("+")}已就绪` : shortName;
             } else {
                 dot.className = "w-2 h-2 rounded-full bg-rose-400 animate-pulse";
-                dot.title = "请先填写 API 密钥";
+                dot.title = "请先填写基础对话 API 密钥";
                 label.innerText = "待填密钥";
             }
 
-            if (savedKey && savedImgModel) {
+            if (imgCfg.isConfigured) {
                 aiPaintBtn.classList.remove("hidden");
             } else {
                 aiPaintBtn.classList.add("hidden");
@@ -1162,15 +1766,7 @@ html_content = r'''<!DOCTYPE html>
         }
 
         function loadAllStates() {
-            const savedKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || "";
-            const savedBase = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
-            const savedModel = localStorage.getItem(STORAGE_KEYS.MODEL) || "openai/gpt-5.6-luna";
-            const savedImgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || "";
-
-            if (savedKey) document.getElementById("apiKeyInput").value = "********";
-            document.getElementById("baseUrlInput").value = savedBase;
-            document.getElementById("modelInput").value = savedModel;
-            document.getElementById("imageModelInput").value = savedImgModel;
+            loadRouteConfigs();
             updateModelStatusUI();
 
             try {
@@ -1215,8 +1811,11 @@ html_content = r'''<!DOCTYPE html>
                     ...dailyState,
                     ...loadedDaily,
                     subjectTurns: { "数学": 0, "语文": 0, "英语": 0, "科学": 0, ...(loadedDaily.subjectTurns || {}) },
+                    subjectCorrectCount: { "数学": 0, "语文": 0, "英语": 0, "科学": 0, ...(loadedDaily.subjectCorrectCount || {}) },
                     completedSubjects: cleanCompleted,
-                    growthCardUnlocked: Boolean(loadedDaily.growthCardUnlocked || cleanCompleted.length >= 4)
+                    growthCardUnlocked: Boolean(loadedDaily.growthCardUnlocked || cleanCompleted.length >= 4),
+                    activeQuiz: loadedDaily.activeQuiz || null,
+                    askedQuestions: { "数学": [], "语文": [], "英语": [], "科学": [], ...(loadedDaily.askedQuestions || {}) }
                 };
                 try {
                     baseChatHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.BASE_CHAT)) || [];
@@ -1228,8 +1827,11 @@ html_content = r'''<!DOCTYPE html>
                     status: "NOT_STARTED",
                     currentSubject: "",
                     subjectTurns: { "数学": 0, "语文": 0, "英语": 0, "科学": 0 },
+                    subjectCorrectCount: { "数学": 0, "语文": 0, "英语": 0, "科学": 0 },
                     completedSubjects: [],
-                    growthCardUnlocked: false
+                    growthCardUnlocked: false,
+                    activeQuiz: null,
+                    askedQuestions: { "数学": [], "语文": [], "英语": [], "科学": [] }
                 };
                 baseChatHistory = [];
                 try {
@@ -1239,7 +1841,7 @@ html_content = r'''<!DOCTYPE html>
             }
 
             const expectedSegments = 4 + dailyState.completedSubjects.length * 2;
-            if (snakeState.segments < expectedSegments) {
+            if (snakeState.segments < expectedSegments || snakeState.segments > 14) {
                 snakeState.segments = expectedSegments;
             }
 
@@ -1268,13 +1870,9 @@ html_content = r'''<!DOCTYPE html>
             localStorage.setItem(STORAGE_KEYS.INTEREST_CHAT, JSON.stringify(interestChatHistory.slice(-28)));
         }
 
-        // ==================== 4. 模型设置独立弹窗逻辑 ====================
         function openModelModal() {
-            const savedKey = localStorage.getItem(STORAGE_KEYS.API_KEY) || "";
-            document.getElementById("baseUrlInput").value = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
-            document.getElementById("modelInput").value = localStorage.getItem(STORAGE_KEYS.MODEL) || "openai/gpt-5.6-luna";
-            document.getElementById("imageModelInput").value = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL) || "";
-            document.getElementById("apiKeyInput").value = savedKey ? "********" : "";
+            loadRouteConfigs();
+            populateFormFromRouteConfigs();
             document.getElementById("modelSaveFeedback").classList.add("hidden");
             document.getElementById("modelModal").classList.remove("hidden");
         }
@@ -1283,42 +1881,67 @@ html_content = r'''<!DOCTYPE html>
             document.getElementById("modelModal").classList.add("hidden");
         }
 
-        function fillQuickModel(modelId) {
-            document.getElementById("modelInput").value = modelId;
-        }
-
         function saveApiConfig() {
-            const keyVal = document.getElementById("apiKeyInput").value.trim();
-            const baseVal = document.getElementById("baseUrlInput").value.trim();
-            const modelVal = document.getElementById("modelInput").value.trim();
-            const imgModelVal = document.getElementById("imageModelInput").value.trim();
+            const chatBase = document.getElementById("chatBaseUrlInput").value.trim().replace(/\/+$/, "");
+            const chatModel = document.getElementById("chatModelInput").value.trim();
+            const chatKeyRaw = document.getElementById("chatApiKeyInput").value.trim();
 
-            if (keyVal && !keyVal.includes("*")) {
-                localStorage.setItem(STORAGE_KEYS.API_KEY, keyVal);
-                document.getElementById("apiKeyInput").value = "********";
-            }
-            if (baseVal) localStorage.setItem(STORAGE_KEYS.BASE_URL, baseVal.replace(/\/+$/, ""));
-            if (modelVal) localStorage.setItem(STORAGE_KEYS.MODEL, modelVal);
-            localStorage.setItem(STORAGE_KEYS.IMAGE_MODEL, imgModelVal);
+            const imgBase = document.getElementById("imageBaseUrlInput").value.trim().replace(/\/+$/, "");
+            const imgModel = document.getElementById("imageModelInput").value.trim();
+            const imgKeyRaw = document.getElementById("imageApiKeyInput").value.trim();
 
-            const currentKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
-            if (!currentKey) {
-                alert("请输入有效的 API Key (sk-...)！");
+            const intBase = document.getElementById("interestBaseUrlInput").value.trim().replace(/\/+$/, "");
+            const intModel = document.getElementById("interestModelInput").value.trim();
+            const intKeyRaw = document.getElementById("interestApiKeyInput").value.trim();
+
+            const finalChatKey = (chatKeyRaw && !chatKeyRaw.includes("*")) ? chatKeyRaw : routeConfigs.chat.apiKey;
+            if (!finalChatKey) {
+                alert("请至少填写【1. 基础对话通道】的 API 密钥 (sk-...)！");
                 return;
             }
 
+            routeConfigs.chat.baseUrl = chatBase || "https://api.deepseek.com/v1";
+            routeConfigs.chat.model = chatModel || "deepseek-chat";
+            routeConfigs.chat.apiKey = finalChatKey;
+            document.getElementById("chatApiKeyInput").value = "********";
+
+            routeConfigs.image.baseUrl = imgBase;
+            routeConfigs.image.model = imgModel;
+            if (imgKeyRaw === "") {
+                routeConfigs.image.apiKey = "";
+            } else if (!imgKeyRaw.includes("*")) {
+                routeConfigs.image.apiKey = imgKeyRaw;
+                document.getElementById("imageApiKeyInput").value = "********";
+            }
+
+            routeConfigs.interest.baseUrl = intBase;
+            routeConfigs.interest.model = intModel;
+            if (intKeyRaw === "") {
+                routeConfigs.interest.apiKey = "";
+            } else if (!intKeyRaw.includes("*")) {
+                routeConfigs.interest.apiKey = intKeyRaw;
+                document.getElementById("interestApiKeyInput").value = "********";
+            }
+
+            persistRouteConfigs();
             updateModelStatusUI();
+
+            const activeSummary = [`基础对话：${routeConfigs.chat.model}`];
+            if (routeConfigs.image.model) activeSummary.push(`视觉生图：${routeConfigs.image.model}`);
+            if (routeConfigs.interest.model) activeSummary.push(`兴趣世界：${routeConfigs.interest.model}`);
+
             const fb = document.getElementById("modelSaveFeedback");
-            fb.innerText = `✅ 模型配置已保存！当前使用：${localStorage.getItem(STORAGE_KEYS.MODEL)}`;
+            fb.classList.remove("bg-blue-50", "text-blue-700", "bg-rose-50", "text-rose-700");
+            fb.classList.add("bg-emerald-50", "text-emerald-800");
+            fb.innerText = `✅ 已保存并同时生效！${activeSummary.join(" ｜ ")}`;
             fb.classList.remove("hidden");
-            updateSnakeUI("discovery", `模型已切换为【${localStorage.getItem(STORAGE_KEYS.MODEL)}】，布谷老师和贪吃蛇尼克都准备好啦！`);
+            updateSnakeUI("discovery", `三路独立通道已同步生效（${activeSummary.join(" / ")}），随时可以开始探索啦！`);
 
             setTimeout(() => {
                 closeModelModal();
-            }, 750);
+            }, 850);
         }
 
-        // ==================== 5. 家长后台：课本进度级联选择 + Lv.1~Lv.10 难度说明与同步反馈 ====================
         function initDifficultySelectOptions(selectedLv) {
             const sel = document.getElementById("parentLevelSelect");
             sel.innerHTML = "";
@@ -1458,7 +2081,13 @@ html_content = r'''<!DOCTYPE html>
 
             const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === levelVal) || DIFFICULTY_LEVELS[0];
 
-            const syncNoticeMsg = `📋 **家长后台学习档案已同步更新！**\n\n- **年级与年龄**：${gradeVal}${termVal}（${ageVal}岁）\n- **当前难度等级**：${lvObj.title}（${lvObj.desc}）\n${summaryLines.join("\n")}\n\n布谷老师已收到最新课本进度，点下方任意学科即可立即按新进度与新难度出题！`;
+            const syncNoticeMsg = `📋 **家长后台学习档案已同步更新！**
+
+- **年级与年龄**：${gradeVal}${termVal}（${ageVal}岁）
+- **当前难度等级**：${lvObj.title}（${lvObj.desc}）
+${summaryLines.join("\n")}
+
+布谷老师已收到最新课本进度，点下方任意学科即可立即按新进度与新难度出题！`;
 
             const targetHist = currentMode === "base" ? baseChatHistory : interestChatHistory;
             const lastChoices = (targetHist.length > 0 && targetHist[targetHist.length - 1].choices)
@@ -1484,7 +2113,6 @@ html_content = r'''<!DOCTYPE html>
             }, 850);
         }
 
-        // ==================== 6. 贪吃蛇尼克：弯曲路径 + 4科果实 + 实时移动伸长动画 ====================
         const snakeCanvas = document.getElementById("snakeCanvas");
         const sCtx = snakeCanvas.getContext("2d");
         const RAINBOW_PALETTE = [
@@ -1754,7 +2382,7 @@ html_content = r'''<!DOCTYPE html>
             const remaining = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
             const lines = [
                 eatenCount < 4
-                    ? `“我是贪吃蛇尼克！还差【${remaining.join("、")}】${4 - eatenCount}颗果实，我就集齐今天的全部能量啦！”`
+                    ? `“我是贪吃蛇尼克！每科答对 3 道题就能吃掉对应果实，还差【${remaining.join("、")}】${4 - eatenCount}颗果实哦！”`
                     : "“哇！4颗学科果实全都被我吃掉啦！今日成长卡和兴趣世界都已经为你解锁咯！”",
                 "“和布谷老师聊天时，直接点选项按钮，或者用 iPad 键盘/语音告诉我你的想法，超方便的！”",
                 "“点一点左下角的 📷 相机，把你画的画或者课本上的小发现拍给我和布谷老师看看吧！”"
@@ -1762,7 +2390,6 @@ html_content = r'''<!DOCTYPE html>
             updateSnakeUI(snakeState.mood, lines[Math.floor(Math.random() * lines.length)]);
         }
 
-        // ==================== 7. 每日闭环与双模式状态同步 ====================
         function enforceModeVisibility() {
             const baseBar = document.getElementById("baseSubjectBar");
             const intTopBar = document.getElementById("interestTopBar");
@@ -1823,8 +2450,11 @@ html_content = r'''<!DOCTYPE html>
 
             const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === Number(learnerProfile.adaptiveLevel)) || DIFFICULTY_LEVELS[0];
             subtitle.innerText = `${learnerProfile.grade}${learnerProfile.term || "上册"}（${learnerProfile.age}岁）· ${lvObj.title} · 布谷老师与贪吃蛇尼克`;
-            topicDisplay.innerText = dailyState.currentSubject
-                ? `${dailyState.currentSubject}探索中（${dailyState.subjectTurns[dailyState.currentSubject] || 0}轮）`
+
+            const curSub = dailyState.currentSubject;
+            const curCorrect = curSub ? (dailyState.subjectCorrectCount[curSub] || 0) : 0;
+            topicDisplay.innerText = curSub
+                ? `${curSub}探索中（已答对 ${curCorrect}/3 题）`
                 : (allFourDone ? "四科全部完成 🎉" : "点击上方学科开始");
 
             if (allFourDone) {
@@ -1835,20 +2465,51 @@ html_content = r'''<!DOCTYPE html>
                 badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800";
             }
 
+            // 同步左侧贪吃蛇尼克面板计数与左边对话框实时答题计数
+            document.getElementById("fruitCount").innerText = eatenCount;
+            document.getElementById("snakeSegmentsText").innerText = snakeState.segments;
+
+            const leftSubPill = document.getElementById("leftCurrentSubjectPill");
+            const leftSubCorrect = document.getElementById("leftSubjectCorrectText");
+            const leftTotalFruits = document.getElementById("leftTotalFruitsText");
+            const leftUtilBar = document.getElementById("leftUtilityActionBar");
+
+            if (currentMode === "interest") {
+                leftSubPill.innerText = `当前世界：${storyState.worldSetting || "兴趣探险"}`;
+                leftSubPill.className = "px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-extrabold";
+                leftSubCorrect.innerHTML = `故事关卡：<strong class="text-purple-700">${storyState.questCount || 0} / ${storyState.questTarget || 5}</strong> 关`;
+                leftTotalFruits.innerHTML = `累计果实：<strong class="text-amber-700">${eatenCount} / 4</strong> 颗`;
+                leftUtilBar.classList.add("hidden");
+            } else {
+                leftUtilBar.classList.remove("hidden");
+                if (curSub) {
+                    leftSubPill.innerText = `当前学科：${curSub}`;
+                    leftSubPill.className = "px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold";
+                    leftSubCorrect.innerHTML = `本科正确：<strong class="text-emerald-700">${curCorrect} / 3</strong> 题`;
+                } else {
+                    const totalRight = ["数学", "语文", "英语", "科学"].reduce((acc, s) => acc + (dailyState.subjectCorrectCount[s] || 0), 0);
+                    leftSubPill.innerText = "当前学科：未选定";
+                    leftSubPill.className = "px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 font-extrabold";
+                    leftSubCorrect.innerHTML = `今日累计答对：<strong class="text-emerald-700">${totalRight}</strong> 题`;
+                }
+                leftTotalFruits.innerHTML = `累计果实：<strong class="text-amber-700">${eatenCount} / 4</strong> 颗`;
+            }
+
             ["数学", "语文", "英语", "科学"].forEach(sub => {
                 const bEl = document.getElementById(`badge-${sub}`);
                 const done = dailyState.completedSubjects.includes(sub);
+                const cNum = dailyState.subjectCorrectCount[sub] || 0;
                 if (bEl) {
                     if (done) {
                         bEl.className = "py-1 px-1 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 transition";
                         bEl.innerText = `✓ ${sub}`;
                     } else if (dailyState.currentSubject === sub) {
                         bEl.className = "py-1 px-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 transition";
-                        bEl.innerText = `● ${sub}`;
+                        bEl.innerText = `${sub} ${cNum}/3`;
                     } else {
                         const iconMap = { "数学": "📐", "语文": "📖", "英语": "🔤", "科学": "🔬" };
                         bEl.className = "py-1 px-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200 transition";
-                        bEl.innerText = `${iconMap[sub]} ${sub}`;
+                        bEl.innerText = cNum > 0 ? `${sub} ${cNum}/3` : `${iconMap[sub]} ${sub}`;
                     }
                 }
             });
@@ -1863,15 +2524,16 @@ html_content = r'''<!DOCTYPE html>
 
             lockIcon.innerText = allFourDone ? "🔓" : "🔒";
 
-            if (dailyState.status === "WAITING_CONFIRM" && currentMode === "base" && dailyState.currentSubject && !dailyState.completedSubjects.includes(dailyState.currentSubject)) {
-                document.getElementById("dailyConfirmText").innerText = `🌟 太棒了！你完成了【${dailyState.currentSubject}】的探索，要让贪吃蛇尼克吃掉这颗${dailyState.currentSubject}果实吗？`;
+            const canEatCurrent = curSub && !dailyState.completedSubjects.includes(curSub) && (dailyState.subjectCorrectCount[curSub] || 0) >= 3;
+            if (dailyState.status === "WAITING_CONFIRM" && currentMode === "base" && canEatCurrent) {
+                document.getElementById("dailyConfirmText").innerText = `🌟 太棒了！你已经答对 ${dailyState.subjectCorrectCount[curSub]} 道【${curSub}】题，要让贪吃蛇尼克吃掉这颗${curSub}果实吗？`;
                 confirmBar.classList.remove("hidden");
             } else {
                 confirmBar.classList.add("hidden");
             }
 
-            if (storyState.waitingNodeChoice && currentMode === "interest" && allFourDone) {
-                document.getElementById("interestNodeText").innerText = `🧭 【${storyState.worldSetting || "兴趣世界"} · 第${storyState.depthStage}阶段】探索达成！由你决定接下来的节奏：`;
+            if (storyState.waitingNodeChoice && currentMode === "interest") {
+                document.getElementById("interestNodeText").innerText = `🎉 太棒了！你已完成【${storyState.worldSetting || "兴趣世界"}】第 ${storyState.depthStage} 章的 ${storyState.questCount}/${storyState.questTarget} 个故事关卡！要继续挑战还是结束本次？`;
                 interestNodeBar.classList.remove("hidden");
             } else {
                 interestNodeBar.classList.add("hidden");
@@ -1879,10 +2541,60 @@ html_content = r'''<!DOCTYPE html>
 
             document.getElementById("storyWorldName").innerText = storyState.worldSetting || "未选择";
             document.getElementById("storySceneName").innerText = storyState.currentScene || "等待开启冒险";
-            document.getElementById("storyDepthLabel").innerText = `第 ${storyState.depthStage} 阶段（Lv.${learnerProfile.adaptiveLevel}）`;
+            const qDone = storyState.questCount || 0;
+            const qTarget = storyState.questTarget || 5;
+            document.getElementById("storyDepthLabel").innerText = `故事关卡 ${qDone}/${qTarget} · 第${storyState.depthStage}章（Lv.${learnerProfile.adaptiveLevel}）`;
             document.getElementById("storyCluesCount").innerText = `已记录线索：${storyState.discoveredClues.length} 条`;
 
             enforceModeVisibility();
+        }
+
+        function getLatestQuestionContextForHelper() {
+            const targetHist = currentMode === "base" ? baseChatHistory : interestChatHistory;
+            for (let idx = targetHist.length - 1; idx >= 0; idx--) {
+                const msg = targetHist[idx];
+                if (msg && msg.role === "assistant") {
+                    const extracted = extractQuizFromAssistantMessage(msg.content, msg.choices);
+                    if (extracted) {
+                        return {
+                            question: msg.content,
+                            choices: msg.choices || []
+                        };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function requestQuestionHint() {
+            if (isSendingRequest) return;
+            const sub = dailyState.currentSubject || "数学";
+            const qCtx = getLatestQuestionContextForHelper();
+            if (!qCtx) {
+                alert("请先选择一门学科并开始出题，再点“💡 提示”哦！");
+                return;
+            }
+            const choicesStr = qCtx.choices.length > 0 ? `候选选项：${qCtx.choices.join(" | ")}` : "";
+            sendMessage(`请针对当前这道【${sub}】题目给我一点思考提示（只给解题思路、单位/关键词提醒或第一步切入点，不要直接说出正确答案字母或完整算式，也不要改变选项）：\n题目内容：${qCtx.question.slice(0, 260)}\n${choicesStr}`);
+        }
+
+        function swapCurrentQuestion() {
+            if (isSendingRequest) return;
+            const sub = dailyState.currentSubject;
+            if (!sub) {
+                alert("请先点击上方【数学 / 语文 / 英语 / 科学】开始一门学科，再点“🔄 换一题”哦！");
+                return;
+            }
+            dailyState.activeQuiz = null;
+            if (dailyState.status === "WAITING_CONFIRM") {
+                dailyState.status = "IN_PROGRESS";
+            }
+            saveAllStates();
+            syncStatusUI();
+
+            const scopeInfo = getAccumulatedCurriculumScope(sub);
+            const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === Number(learnerProfile.adaptiveLevel)) || DIFFICULTY_LEVELS[0];
+            sendMessage(`请换一道全新的【${sub}】选择题！从【${sub}】已学累积范围池（${scopeInfo.allCoveredList.join("；")}）中换一个知识点，按【${lvObj.title}】难度出题，不要重复上一道题，必须包含完整题干、3 个选项（A、B、C）以及 [ANSWER: 正确字母] 和 [CHOICES: A. ... | B. ... | C. ...]。`);
         }
 
         function switchMode(mode) {
@@ -1905,7 +2617,7 @@ html_content = r'''<!DOCTYPE html>
                 baseBtn.className = "text-gray-700 hover:bg-white/60 px-3 py-1.5 rounded-lg transition cursor-pointer flex items-center gap-1 min-h-[38px]";
 
                 if (dailyState.completedSubjects.length >= 4) {
-                    updateSnakeUI("exploring", "欢迎来到兴趣世界！布谷老师会结合你学过的知识，带你向更深、更有挑战的领域探险，也能随时自由交流！");
+                    updateSnakeUI("exploring", "欢迎来到兴趣世界！布谷老师会结合你学过的知识，带你向更深、更有挑战的拓展领域探险，也能随时自由交流！");
                 } else {
                     updateSnakeUI("discovery", `先集齐路径上的 4 颗学科果实（目前 ${dailyState.completedSubjects.length}/4），就能解锁完整兴趣世界哦！`);
                 }
@@ -1923,8 +2635,11 @@ html_content = r'''<!DOCTYPE html>
                 status: "NOT_STARTED",
                 currentSubject: "",
                 subjectTurns: { "数学": 0, "语文": 0, "英语": 0, "科学": 0 },
+                subjectCorrectCount: { "数学": 0, "语文": 0, "英语": 0, "科学": 0 },
                 completedSubjects: [],
-                growthCardUnlocked: false
+                growthCardUnlocked: false,
+                activeQuiz: null,
+                askedQuestions: { "数学": [], "语文": [], "英语": [], "科学": [] }
             };
             snakeState.segments = 4;
             snakeState.currentHeadT = 0.16;
@@ -1933,7 +2648,7 @@ html_content = r'''<!DOCTYPE html>
             snakeState.collectAnimTimer = 0;
             baseChatHistory = [];
             currentMode = "base";
-            updateSnakeUI("companion", "早安呀！新的一天开始啦，贪吃蛇尼克已经站在起点，准备吃掉数学、语文、英语、科学4颗能量果实咯！");
+            updateSnakeUI("companion", "早安呀！新的一天开始啦，贪吃蛇尼克已经站在起点，每个科目答对3道题就能吃掉一颗能量果实咯！");
             saveAllStates();
             switchMode("base");
             initBaseWelcome();
@@ -1968,7 +2683,9 @@ html_content = r'''<!DOCTYPE html>
                     dailyState.currentSubject = "";
                     updateSnakeUI("growing", "🎉 太厉害啦！4颗学科果实全部被尼克吃掉啦！今日成长卡已解锁，兴趣世界也向你敞开大门咯！");
 
-                    const finishAllMsg = `🎉 恭喜你！贪吃蛇尼克已经沿着小径吃掉了【数学、语文、英语、科学】全部 4 颗能量果实，身体变得又长又亮！\n\n现在你可以点击下方按钮继续：`;
+                    const finishAllMsg = `🎉 恭喜你！贪吃蛇尼克已经沿着小径吃掉了【数学、语文、英语、科学】全部 4 颗能量果实，身体变得又长又亮！
+
+现在你可以点击下方按钮继续：`;
                     baseChatHistory.push({
                         role: "assistant",
                         content: finishAllMsg,
@@ -1979,7 +2696,10 @@ html_content = r'''<!DOCTYPE html>
                     const nextSub = remaining[0];
                     updateSnakeUI("growing", `啊呜！尼克吃掉了【${sub}果实】，向前爬行并长高了两节！还剩 ${remaining.length} 颗果实（${remaining.join("、")}），我们去点亮【${nextSub}】吧！`);
 
-                    const nextSubMsg = `🍎 咔嚓！贪吃蛇尼克开心得摇起了尾巴，顺利吃掉了【${sub}能量果实】，身体变长了 2 节！\n\n目前进度：**${eatenCount} / 4 颗果实**（还差：${remaining.join("、")}）。\n直接点下方按钮就可以开始下一门探索啦：`;
+                    const nextSubMsg = `🍎 咔嚓！贪吃蛇尼克开心得摇起了尾巴，顺利吃掉了【${sub}能量果实】，身体变长了 2 节！
+
+目前进度：**${eatenCount} / 4 颗果实**（还差：${remaining.join("、")}）。
+直接点下方按钮就可以开始下一门探索啦：`;
                     baseChatHistory.push({
                         role: "assistant",
                         content: nextSubMsg,
@@ -2000,13 +2720,196 @@ html_content = r'''<!DOCTYPE html>
         function continueDailyExploration() {
             if (!dailyState.currentSubject) return;
             dailyState.status = "IN_PROGRESS";
+            dailyState.activeQuiz = null;
             saveAllStates();
             syncStatusUI();
+            const sub = dailyState.currentSubject;
+            const scopeInfo = getAccumulatedCurriculumScope(sub);
             const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === Number(learnerProfile.adaptiveLevel)) || DIFFICULTY_LEVELS[0];
-            sendMessage(`请严格围绕【${learnerProfile.subjectProgress[dailyState.currentSubject]}】并按【${lvObj.title}】难度，再出一道【${dailyState.currentSubject}】选择题，给出完整题干和 3 个答案选项。`);
+            sendMessage(`我选择继续留在【${sub}】挑战！请从【${sub}】累积范围池（${scopeInfo.allCoveredList.join("；")}）中换一个新知识点，按【${lvObj.title}】难度再出一道【${sub}】选择题，给出完整题干、3 个选项以及 [ANSWER: 正确字母] 和 [CHOICES: A. ... | B. ... | C. ...]。`);
         }
 
-        // ==================== 8. System Prompt 构建器（含数学强制验算与难度档位精确映射） ====================
+        function getAccumulatedCurriculumScope(subject) {
+            const grade = learnerProfile.grade || "小学三年级";
+            const term = learnerProfile.term || "上册";
+            const units = getUnitsForSubject(grade, term, subject);
+            const sel = (learnerProfile.curriculumSelection && learnerProfile.curriculumSelection[subject]) || { unitIdx: 0, lessonIdx: 0, note: "" };
+            const maxU = Math.min(Math.max(0, sel.unitIdx || 0), units.length - 1);
+            const maxL = Math.min(Math.max(0, sel.lessonIdx || 0), (units[maxU]?.lessons?.length || 1) - 1);
+
+            const scopeItems = [];
+            for (let u = 0; u <= maxU; u++) {
+                const uObj = units[u];
+                const lessonLimit = (u === maxU) ? maxL : (uObj.lessons.length - 1);
+                const coveredLessons = uObj.lessons.slice(0, lessonLimit + 1);
+                scopeItems.push(`${uObj.unit}（包含：${coveredLessons.join("、")}）`);
+            }
+            const latestDesc = `${grade}${term} · ${units[maxU]?.unit || ""} · ${units[maxU]?.lessons?.[maxL] || ""}${sel.note ? `（家长重点补充：${sel.note}）` : ""}`;
+            return {
+                latestDesc,
+                allCoveredList: scopeItems
+            };
+        }
+
+        function verifyMathQuizHard(questionText, optionsMap, claimedAnswerLetter) {
+            const letters = ["A", "B", "C"].filter(L => optionsMap[L]);
+            if (letters.length === 0) return claimedAnswerLetter;
+
+            const q = String(questionText || "").replace(/×/g, "*").replace(/÷/g, "/").replace(/＝/g, "=");
+            const matchOptionByExactNumber = (targetNum) => {
+                if (targetNum === null || isNaN(targetNum)) return null;
+                const exactStr = String(targetNum);
+                for (const L of letters) {
+                    const m = (optionsMap[L] || "").match(/-?\d+(?:\.\d+)?/);
+                    if (m && m[0] === exactStr) return L;
+                }
+                return null;
+            };
+
+            if (q.includes("长方形") && (q.includes("一圈") || q.includes("周长")) && (q.includes("宽是多少") || q.includes("长是多少"))) {
+                const nums = (q.match(/\d+/g) || []).map(Number);
+                if (nums.length === 2) {
+                    const P = Math.max(nums[0], nums[1]);
+                    const side = Math.min(nums[0], nums[1]);
+                    if (P % 2 === 0 && P / 2 > side) {
+                        const hit = matchOptionByExactNumber(P / 2 - side);
+                        if (hit) return hit;
+                    }
+                }
+            }
+
+            if (q.includes("正方形") && (q.includes("周长") || q.includes("一圈")) && q.includes("边长")) {
+                const nums = (q.match(/\d+/g) || []).map(Number);
+                if (nums.length === 1 && nums[0] % 4 === 0) {
+                    const hit = matchOptionByExactNumber(nums[0] / 4);
+                    if (hit) return hit;
+                }
+            }
+
+            const timeMatch = q.match(/(\d{1,2})[:：](\d{1,2})/);
+            if (timeMatch && (q.includes("分") || q.includes("秒") || q.includes("时"))) {
+                let h = parseInt(timeMatch[1], 10);
+                let m = parseInt(timeMatch[2], 10);
+                let s = 0;
+                const addMinM = q.match(/(?:再过|经过|加上|多)\s*(\d+)\s*分/);
+                const addSecM = q.match(/(\d+)\s*秒/);
+                const addHrM = q.match(/(\d+)\s*(?:小时|时)/);
+                if (addHrM) h += parseInt(addHrM[1], 10);
+                if (addMinM) m += parseInt(addMinM[1], 10);
+                if (addSecM) s += parseInt(addSecM[1], 10);
+
+                if (s >= 60) { m += Math.floor(s / 60); s = s % 60; }
+                if (m >= 60) { h += Math.floor(m / 60); m = m % 60; }
+
+                const hStr = String(h);
+                const mmStr = String(m).padStart(2, "0");
+                const mNoPad = String(m);
+                const candidates = [`${hStr}:${mmStr}`, `${hStr}:${mNoPad}`];
+                if (s >= 30) {
+                    let mRound = m + 1, hRound = h;
+                    if (mRound >= 60) { hRound += 1; mRound = 0; }
+                    candidates.push(`${hRound}:${String(mRound).padStart(2, "0")}`, `${hRound}:${mRound}`);
+                }
+                for (const c of candidates) {
+                    for (const L of letters) {
+                        const optClean = (optionsMap[L] || "").replace(/\s+/g, "");
+                        if (optClean === c || optClean.includes(c)) return L;
+                    }
+                }
+            }
+
+            const allNums = q.match(/\d+/g) || [];
+            const binMatch = q.match(/(\d+)\s*([+\-*/])\s*(\d+)/);
+            if (binMatch && allNums.length === 2) {
+                const a = parseInt(binMatch[1], 10);
+                const op = binMatch[2];
+                const b = parseInt(binMatch[3], 10);
+                let exact = null;
+                if (op === "+") exact = a + b;
+                else if (op === "-") exact = a - b;
+                else if (op === "*") exact = a * b;
+                else if (op === "/" && b !== 0 && a % b === 0) exact = a / b;
+                const hit = matchOptionByExactNumber(exact);
+                if (hit) return hit;
+            }
+
+            return letters.includes(claimedAnswerLetter) ? claimedAnswerLetter : null;
+        }
+
+        function extractQuizFromAssistantMessage(msgContent, choicesArr) {
+            const optionsMap = {};
+            const letters = ["A", "B", "C"];
+            if (Array.isArray(choicesArr) && choicesArr.length >= 2) {
+                choicesArr.slice(0, 3).forEach((opt, idx) => {
+                    const L = letters[idx];
+                    const body = String(opt || "").replace(/^[A-Da-d][\.．、\）\):：\s]+/, "").trim();
+                    if (body) optionsMap[L] = body;
+                });
+            }
+            if (Object.keys(optionsMap).length < 2 && msgContent) {
+                const lineMatches = String(msgContent).matchAll(/(?:^|\n)\s*(?:\*\*)?([A-Ca-c])[\.．、\）\):：]\s*([^\n*]+)/g);
+                for (const m of lineMatches) {
+                    optionsMap[m[1].toUpperCase()] = m[2].trim();
+                }
+            }
+            if (Object.keys(optionsMap).length < 2) return null;
+            return {
+                question: String(msgContent || ""),
+                options: optionsMap,
+                answerLetter: null
+            };
+        }
+
+        function judgeUserChoiceDeterministic(userInputText, quizObj) {
+            const trimmed = String(userInputText || "").trim();
+            if (
+                trimmed.includes("重新生成") ||
+                trimmed.includes("换一道") ||
+                trimmed.includes("给我一点提示") ||
+                trimmed.includes("进入【") ||
+                trimmed.includes("收集果实") ||
+                trimmed.includes("挑战") ||
+                trimmed.includes("按新进度测")
+            ) {
+                return null;
+            }
+
+            let chosen = null;
+            const letterMatch = trimmed.match(/^(?:我选|选|答案是|应该是)?\s*([A-Ca-c])(?:[\.．、\）\):：\s]|$)/);
+            if (letterMatch) {
+                chosen = letterMatch[1].toUpperCase();
+            } else if (quizObj && quizObj.options) {
+                const normUser = normalizeOptionCompareStr(trimmed);
+                if (normUser) {
+                    for (const L of ["A", "B", "C"]) {
+                        const normOpt = normalizeOptionCompareStr(quizObj.options[L] || "");
+                        if (normOpt && normUser === normOpt) {
+                            chosen = L;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!chosen) return null;
+
+            if (quizObj && quizObj.answerLetter) {
+                return {
+                    chosenLetter: chosen,
+                    isCorrect: chosen === quizObj.answerLetter,
+                    correctLetter: quizObj.answerLetter,
+                    correctText: quizObj.options?.[quizObj.answerLetter] || ""
+                };
+            }
+
+            return {
+                chosenLetter: chosen,
+                isCorrect: null,
+                correctLetter: null,
+                correctText: quizObj?.options?.[chosen] || ""
+            };
+        }
+
         function buildSystemPrompt() {
             const lvNum = Number(learnerProfile.adaptiveLevel) || 1;
             const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === lvNum) || DIFFICULTY_LEVELS[0];
@@ -2014,76 +2917,89 @@ html_content = r'''<!DOCTYPE html>
             const profileInfo = `【家长后台设定的孩子学习档案（必须严格遵循！）】
 - 孩子年龄：${learnerProfile.age}岁，当前年级与学期：${learnerProfile.grade}${learnerProfile.term || "上册"}
 - 当前指定难度等级：【${lvObj.title}】
-  * 难度执行细则：${lvObj.desc}
-  * 请严格按此档位控制题目的思考步骤数、已知条件隐蔽程度以及干扰项（错误选项）的迷惑度！
-- 各学科当前课本进度（必须紧扣对应的单元与课次知识点出题，严禁超纲或偏离单元主题）：
-  * 数学：${learnerProfile.subjectProgress["数学"]}
-  * 语文：${learnerProfile.subjectProgress["语文"]}
-  * 英语：${learnerProfile.subjectProgress["英语"]}
-  * 科学：${learnerProfile.subjectProgress["科学"]}`;
+  * 难度执行细则：${lvObj.desc}`;
 
             const mathVerificationRule = `
-【数学与计算题零差错硬性验算规则（极其重要！）】
-凡涉及任何数字计算、单位换算、时间推算、周长/面积/倍数/分数计算，或批改孩子的数学答案时：
-1. 你必须在内部先列出完整分步算式并逐位核对进位/退位，绝对禁止心算跳步。
-2. 出题时，必须确保 3 个选项（A、B、C）中**有且仅有一个**与精确计算结果完全一致，另外两个必须是合理的干扰项（例如忘记进位、单位看错等），严禁出现“3个选项全错”或“出现2个正确答案”。
-3. 批改孩子作答时，必须先独立算出题目的精确数值，再与孩子选择的选项对比，严禁被错误记忆误导。
-4. 每次涉及计算时，必须在回复的倒数第二行附上验算标记（系统会自动隐藏，不展示给孩子）：
-   [CALC: 完整分步算式 = 精确结果，对应正确选项字母]`;
+【中国小学课标绝对知识边界红线（最高优先级，违反即严重错误！）】
+- 孩子当前只有 **${learnerProfile.age} 岁（${learnerProfile.grade}${learnerProfile.term || "上册"}）**！
+- 无论是【今日基础探索】还是【兴趣世界（如工程与建造、自然探索等）】，**绝对严禁**出现任何超出【${learnerProfile.grade}】课本的初中/高年级概念！
+  * 严禁出现：勾股定理、平方根/开方、三角形斜边计算、未知数 x/y 解方程、负数、小数乘除（三年级上册未学）、圆周率面积、物理公式（压强/浮力/杠杆公式）等超纲内容！
+  * 即使是 Lv.5 ~ Lv.10 高阶难度，也**只能**在【${learnerProfile.grade}】已学加减乘除、长方形/正方形周长、时间推算、倍数、单位换算等课内工具范围内增加思考步数或生活情境，绝对不能用高年级公式！
+
+【数学与逻辑题零差错硬性验算规则（极其重要！）】
+1. 凡涉及任何数字计算、单位换算、时间推算、周长/面积/倍数/分数计算：
+   - 出题前必须逐位核对进位/退位，确保 3 个选项（A、B、C）中**有且仅有一个**与精确计算结果完全一致，严禁出现“3个选项全错”或“2个选项都对”。
+   - **【出题绝对禁令——严禁提前剧透/暴露答案！】**：在孩子还没选择之前，出题时**只能**给出故事/情境题干和 A、B、C 三个选项！**绝对严禁**在出题当轮写出计算过程、算式结果、答案字母、口诀点破答案，或逐一分析“A错了/B对了/C错了”！具体的做法和答案解释**只能在孩子选完之后**再讲！
+   - 批改以系统传入的【前端确定性验算判题结果】为准，严禁模型自己胡乱推翻正确答案！
+2. 英语与语文情景逻辑自检（杜绝语境矛盾错题）：
+   - 出英语情景对话题时，必须检查前后文逻辑是否自洽！例如：如果对方已经说了 "Hi, I'm Tom."（已经自我介绍了名字），绝对不能让孩子再回答 "What's your name?"，而应该是 "Nice to meet you, Tom!" 或 "Hi, Tom! I'm Amy."。
+   - 出语文与科学题时，确保题干前提与唯一正确答案严格对应、无歧义。`;
 
             const choiceFormatRule = `
 【iPad 触控与语音优先交互铁律（每轮回复必须严格遵守！）】
-孩子在 iPad 上直接触控点选答案按钮，或使用键盘/语音回复：
-1. 每次回复简短清晰、口语化（100~175字以内），重点口诀或关键句用 **加粗** 突出，一次只推进一步或一道小题。
-2. 禁止只提开放式问答题而不给候选答案！每道题或每个探索步骤都必须给出完整题干/情境，并且提供 **3 个具体、可独立作答的选项（A、B、C）**。
-3. 在正文中必须完整写出题目和 3 个选项（如 A. ... / B. ... / C. ...），同时在回复的最后一行严格附上英文方括号标签：
+1. 每次回复简短清晰、口语化（100~175字以内），重点口诀或关键句用 **加粗** 突出。
+2. 出题时必须给出完整题干与 **3 个具体候选选项（A、B、C）**，并在回复最后两行严格附上以下两个标签（系统会自动隐藏并用于确定性判分，严禁遗漏！）：
+   [ANSWER: 正确选项字母A或B或C]
    [CHOICES: A. 选项一 | B. 选项二 | C. 选项三]
-   - 选项必须紧扣当前题目或当前场景，严禁出现与当前题目无关的通用按钮。
-   - 每个选项控制在 4~18 个字以内，方便小朋友在 iPad 屏幕上直接触碰。`;
+   - 确保正文中列出的选项文字与 [CHOICES: ...] 中完全一致，每个选项控制在 4~18 个字以内。`;
 
             if (currentMode === "base") {
-                const sub = dailyState.currentSubject || "综合探索";
-                const subProgress = learnerProfile.subjectProgress[sub] || "当前年级基础进度";
-                const turns = dailyState.subjectTurns[sub] || 0;
-                const alreadyEaten = dailyState.completedSubjects.includes(sub);
+                const sub = dailyState.currentSubject || "数学";
+                const scopeInfo = getAccumulatedCurriculumScope(sub);
+                const correctCount = dailyState.subjectCorrectCount[sub] || 0;
+                const remainingSubs = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
+                const eatenCount = dailyState.completedSubjects.length;
+                const askedList = (dailyState.askedQuestions && dailyState.askedQuestions[sub]) || [];
 
-                return `你是“布谷老师”，一位亲切、温暖、严谨且充满好奇心的 AI 探索导师；你的搭档“贪吃蛇尼克”正陪着孩子沿着森林小径收集数学、语文、英语、科学 4 颗能量果实。
+                return `你是“布谷老师”，一位亲切、严谨且充满好奇心的 AI 探索导师；你的搭档“贪吃蛇尼克”正陪着孩子沿着森林小径收集数学、语文、英语、科学 4 颗能量果实。
 
 ${profileInfo}
 ${mathVerificationRule}
 
-【当前任务与教学策略】
-1. 角色一致性：你始终是“布谷老师”，对话中可以自然提到“贪吃蛇尼克”，说话主体永远是布谷老师。
-2. 精准对齐课本单元与难度：
-   - 当前探索学科：【${sub}】
-   - 锁定课本进度：【${subProgress}】
-   - 锁定难度等级：【${lvObj.title}】（${lvObj.desc}）
-   - 数学、科学、英语、语文均采用带 3 个明确选项（A、B、C）的选择题（英语题也要给出完整英文问候/句子与 3 个具体选项）。
-   - 第 1 轮：紧扣上述单元/课次知识点与指定难度等级，给出生活情境、完整题干和 3 个选项。
-   - 第 2 轮及以后：先针对孩子上一轮的选择给出明确反馈与简短解释（若为计算题先核对算式）；若该学科尚未完成，继续给出下一道同单元/同难度的带 3 个选项的选择题。
-${choiceFormatRule}
-3. 学科完成标记：
-   - 当前【${sub}】已交互轮次：${turns}（本轮是否已吃过果实：${alreadyEaten ? "是" : "否"}）。
-   - 仅当孩子已完成至少 2 轮有效作答且本轮已给出针对性反馈时，才可在最后一行附上：[SUBJECT_DONE]。`;
+【一、系统实时真实进度（绝对真相，严禁篡改或自编数字！）】
+- 当前锁定学科：【${sub}】
+- 当前【${sub}】前端真实答对题数：${correctCount} / 3 题（${correctCount >= 3 ? "已满3题！达到果实点亮条件" : "尚未满3题"}）
+- 今日已集齐果实数：${eatenCount} / 4 颗（已吃掉：${dailyState.completedSubjects.join("、") || "暂无"}；尚未完成：${remainingSubs.join("、") || "全部完成"}）
+- **铁律 1（严禁自编进度数字）**：你在回复正文中**绝对不要**自己编造“第X题”、“2/3”、“3/3全对”、“目前X/4颗果实”等任何计数文字！进度计数完全由左右界面实时显示。
+- **铁律 2（严禁擅自切换学科或切断供题）**：你当前只能出【${sub}】的题目！哪怕本学科已经答对满 3 题，你也**绝对不能**擅自出科学、英语或其他科目的题目！也**绝对不能**说“今天的题目就到这里啦/不出了”来主动切断供题！
+
+【二、扩大考核知识面与防重题规则】
+- 家长设定【${sub}】已学到：${scopeInfo.latestDesc}
+- **本轮【${sub}】完整考核范围池（当前课次及本学期之前所有已学单元都可考核，请交替轮换出题，严禁只盯着最后一课出题！）**：
+${scopeInfo.allCoveredList.map(item => "  * " + item).join("\n")}
+- 本轮已出过的题干摘要（严禁重复或高度雷同）：
+${askedList.length > 0 ? askedList.slice(-10).map(q => "  * " + q).join("\n") : "  * 暂无"}
+
+【三、不同状态下的教学与引导动作】
+1. **当本学科答对数 < 3 题时**：
+   - 若系统提示【回答正确】：用 1~2 句话热情肯定并点出解题关键，紧接着出一道【${sub}】的新选择题（轮换范围池里的不同单元知识点），末尾附 \`[ANSWER: 字母]\` 和 \`[CHOICES: A. ... | B. ... | C. ...]\`。
+   - 若系统提示【回答错误】：温柔鼓励，用 1~2 句话讲清楚为什么正确答案是对的、错在哪里，然后出一道同知识点的【${sub}】新题巩固（或让孩子再试一次），末尾附 \`[ANSWER: 字母]\` 和 \`[CHOICES: A. ... | B. ... | C. ...]\`。
+2. **当本学科答对数已达到 3 题（满3题）时**：
+   - 用热情温暖的语言表扬孩子答对了这道题、已经满足点亮【${sub}】能量果实的条件！
+   - 列出目前还没完成的剩余科目（${remainingSubs.filter(s => s !== sub).join("、") || "无"}），温和推荐孩子接下来去挑战其中一科，引导孩子自己点击下方的“🍎 吃掉果实，继续下一科”或“🔍 再挑战一道升级题”按钮做选择；**不要直接抛出下一科的题目**！
+${choiceFormatRule}`;
             } else {
                 const learnedSummary = dailyState.completedSubjects.length > 0
                     ? `今天刚刚完成了：${dailyState.completedSubjects.join("、")}的探索。`
                     : "正准备开启拓展探索。";
                 const storySummary = `世界设定：${storyState.worldSetting || "奇幻探索世界"}；当前场景：${storyState.currentScene || "冒险起点"}；当前探索深度：第 ${storyState.depthStage} 阶段（难度阶梯 ${lvObj.title}）；已发现线索：${storyState.discoveredClues.join("、") || "暂无"}。`;
 
-                return `你是“布谷老师”，正在【兴趣世界】里以冒险伙伴与向导的身份，带着贪吃蛇尼克和孩子一起探索【${storyState.worldSetting || "奇幻探索世界"}】。
+                const qDone = storyState.questCount || 0;
+                const qTarget = storyState.questTarget || 5;
+                return `你是“布谷老师”，正在【兴趣世界】里以故事向导与冒险伙伴的身份，带着贪吃蛇尼克和孩子一起演绎一段有起伏、有画面感、有完整情节的【${storyState.worldSetting || "奇幻探索世界"}】冒险故事！
 
 ${profileInfo}
 ${mathVerificationRule}
 ${learnedSummary}
 
-【兴趣世界核心规则】
-1. 角色与氛围：更像冒险中的故事伙伴，根据【${storyState.worldSetting || "奇幻探索世界"}】营造画面感，允许孩子自由提问、编故事或表达想法，在合适时机自然融入【${learnerProfile.grade}${learnerProfile.term || "上册"}】课本知识延伸，并匹配【${lvObj.title}】的推理深度。
-2. 探索行动选项：在正文中清晰说明当前情境与 3 个行动选项，并在最后一行严格附上 [CHOICES: A. ... | B. ... | C. ...]。
+【兴趣世界核心规则——与“今日基础探索”完全不同的故事关卡体验】
+1. **强故事性与完整剧情**：这里**不是**枯燥的刷题课堂！每一轮都要推进连贯的故事剧情（起承转合、神秘委托、机关谜题、伙伴互动、线索发现），让孩子像在读互动冒险绘本一样代入其中。
+2. **打散融合各科知识关卡**：把语文、数学、英语、科学的小知识点**自然打散**融入故事情节中，变成“破译古老咒语/密码锁/地图坐标/自然现象机关”的趣味关卡考验（不要生硬标榜“这是数学题/语文题”），并结合【${learnerProfile.grade}${learnerProfile.term || "上册"}】与【${lvObj.title}】控制难度且严禁超纲。
+3. **先选再解释（严禁提前剧透）**：当故事关卡给出 3 个选择（A、B、C）时，**绝对不要提前说出正确答案、算式或解析**；只有当孩子做出选择后，才用故事口吻解释刚才那关的做法、道理与结果，并顺势展开下一关剧情！
+4. **5 关一节点的节奏**：
+   - 当前故事关卡进度：已完成 ${qDone} / ${qTarget} 关（第 ${storyState.depthStage} 章）。
+   - 当孩子刚完成第 ${qTarget} 关（即本轮第 5 个关卡刚揭晓结果时），在结尾自然收束当前第 ${qTarget} 关的剧情小高潮，引导孩子选择“继续挑战”还是“结束本次”，并在末尾附上 [STAGE_CHECKPOINT]。
 ${choiceFormatRule}
-3. 阶段节点提示：
-   - 当前处于第 ${storyState.depthStage} 阶段，本阶段已交流 ${storyState.stageTurns} 轮。
-   - 每当完成一个小探险节拍（本阶段交流至少 2 轮后），可在末尾附上：[STAGE_CHECKPOINT]。
 
 【当前故事记忆档案】
 ${storySummary}
@@ -2094,11 +3010,14 @@ ${storySummary}
             }
         }
 
-        // ==================== 9. 初始化与快捷交互入口 ====================
         function initBaseWelcome() {
             if (baseChatHistory.length === 0) {
                 const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === Number(learnerProfile.adaptiveLevel)) || DIFFICULTY_LEVELS[0];
-                const welcomeMsg = `你好呀！我是布谷老师，旁边这位扭来扭去的小家伙是贪吃蛇尼克 🐍\n\n森林小径上有 **数学、语文、英语、科学** 4 颗能量果实！我已经记下了你【${learnerProfile.grade}${learnerProfile.term || "上册"}】（${lvObj.title}）的课本进度，每完成一门探索，尼克就会向前爬行并长高一节。\n\n直接点下方按钮就可以开始今天的第一颗果实啦！`;
+                const welcomeMsg = `你好呀！我是布谷老师，旁边这位扭来扭去的小家伙是贪吃蛇尼克 🐍
+
+森林小径上有 **数学、语文、英语、科学** 4 颗能量果实！我已经记下了你【${learnerProfile.grade}${learnerProfile.term || "上册"}】（${lvObj.title}）的课本进度，**每个科目答对 3 道题**，尼克就能吃掉对应的果实并长高一节。
+
+直接点下方按钮就可以开始今天的第一颗果实啦！`;
                 baseChatHistory.push({
                     role: "assistant",
                     content: welcomeMsg,
@@ -2115,20 +3034,26 @@ ${storySummary}
             if (isSendingRequest) return;
             if (currentMode !== "base") switchMode("base");
             dailyState.currentSubject = subject;
-            if (dailyState.status === "NOT_STARTED" || dailyState.status === "WAITING_CONFIRM") {
+            const cNum = dailyState.subjectCorrectCount[subject] || 0;
+            const isAlreadyDone = dailyState.completedSubjects.includes(subject);
+
+            if (!isAlreadyDone && cNum >= 3) {
+                dailyState.status = "WAITING_CONFIRM";
+            } else if (dailyState.status === "NOT_STARTED" || dailyState.status === "WAITING_CONFIRM") {
                 dailyState.status = "IN_PROGRESS";
             }
-            const prog = learnerProfile.subjectProgress[subject] || "本学期基础内容";
+
+            dailyState.activeQuiz = null;
+            const scopeInfo = getAccumulatedCurriculumScope(subject);
             const lvObj = DIFFICULTY_LEVELS.find(d => d.lv === Number(learnerProfile.adaptiveLevel)) || DIFFICULTY_LEVELS[0];
-            const isAlreadyDone = dailyState.completedSubjects.includes(subject);
 
             saveAllStates();
             syncStatusUI();
-            updateSnakeUI("discovery", `布谷老师正在按【${prog} · ${lvObj.title}】准备【${subject}】题目...`);
+            updateSnakeUI("discovery", `布谷老师正在从【${scopeInfo.latestDesc}】及前置已学单元中挑选【${subject}】题目（当前真实答对 ${cNum}/3 题）...`);
 
             const promptText = isAlreadyDone
-                ? `请严格紧扣课本进度【${prog}】并按照【${lvObj.title}】难度标准，出一道【${subject}】升级加练选择题，必须包含完整题干和 3 个选项（A、B、C），并在最后一行输出 [CHOICES: A. ... | B. ... | C. ...]。`
-                : `请严格紧扣课本进度【${prog}】并按照【${lvObj.title}】难度标准，为我开启第一个【${subject}】生活探索情境与选择题，必须包含完整题干和 3 个选项（A、B、C），并在最后一行输出 [CHOICES: A. ... | B. ... | C. ...]。`;
+                ? `请从【${subject}】已学累积范围池（${scopeInfo.allCoveredList.join("；")}）中挑选一个知识点，按照【${lvObj.title}】难度标准，出一道【${subject}】升级加练选择题，必须包含完整题干、3 个选项（A、B、C）以及 [ANSWER: 正确字母] 和 [CHOICES: A. ... | B. ... | C. ...]。`
+                : `请从【${subject}】已学累积范围池（${scopeInfo.allCoveredList.join("；")}）中随机挑选一个未考过的知识点，按照【${lvObj.title}】难度标准，出一道【${subject}】选择题，必须包含完整题干、3 个选项（A、B、C）以及 [ANSWER: 正确字母] 和 [CHOICES: A. ... | B. ... | C. ...]。`;
             sendMessage(promptText);
         }
 
@@ -2142,9 +3067,11 @@ ${storySummary}
             if (isSendingRequest) return;
             if (currentMode !== "interest") switchMode("interest");
             storyState.worldSetting = worldName;
-            storyState.currentScene = `${worldName}·第一探索区`;
+            storyState.currentScene = `${worldName}·故事第1关`;
             storyState.depthStage = 1;
             storyState.stageTurns = 0;
+            storyState.questCount = 0;
+            storyState.questTarget = 5;
             storyState.waitingNodeChoice = false;
             if (!learnerProfile.exploredInterests.includes(worldName)) {
                 learnerProfile.exploredInterests.push(worldName);
@@ -2152,20 +3079,7 @@ ${storySummary}
             saveAllStates();
             syncStatusUI();
 
-            if (dailyState.completedSubjects.length < 4) {
-                const rem = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
-                const previewMsg = `你选择了【${worldName}】！✨\n\n这里是布谷老师为你准备的兴趣探险区。目前贪吃蛇尼克还需要吃掉【${rem.join("、")}】这 ${rem.length} 颗学科果实才能解锁完整自由探险哦！`;
-                interestChatHistory.push({
-                    role: "assistant",
-                    content: previewMsg,
-                    choices: rem.map(s => `🍎 去收集【${s}】果实`)
-                });
-                saveAllStates();
-                renderChatFromHistory();
-                return;
-            }
-
-            sendMessage(`请带我进入【${worldName}】第 1 阶段探险，给出当前场景说明和 3 个可点选的行动选项（A、B、C），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
+            sendMessage(`请为我开启一段完整的【${worldName}】冒险故事（共 5 个连贯故事关卡，每关把语文/数学/英语/科学知识打散融进故事情节与机关考验中）。现在是故事第 1 关开头：先讲出吸引人的故事背景与当前遇到的第一个关卡考验，再给出 3 个行动选项（A、B、C，注意出题时不要提前暴露答案与做法），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
         }
 
         function continueInterestDeepExplore() {
@@ -2173,9 +3087,11 @@ ${storySummary}
             storyState.waitingNodeChoice = false;
             storyState.depthStage += 1;
             storyState.stageTurns = 0;
+            storyState.questCount = 0;
+            storyState.questTarget = 5;
             saveAllStates();
             syncStatusUI();
-            sendMessage(`请带我进入【${storyState.worldSetting || "兴趣世界"}】的第 ${storyState.depthStage} 阶段，提升挑战深度并给出 3 个可点选的行动选项（A、B、C），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
+            sendMessage(`我选择【继续挑战】！请开启【${storyState.worldSetting || "兴趣世界"}】第 ${storyState.depthStage} 章的新一轮 5 个连贯故事关卡，延续故事剧情并把跨学科小考验自然打散进关卡中，给出 3 个行动选项（A、B、C，不要提前暴露答案与做法），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
         }
 
         function finishInterestSession() {
@@ -2183,7 +3099,7 @@ ${storySummary}
             storyState.waitingNodeChoice = false;
             saveAllStates();
             syncStatusUI();
-            sendMessage(`我决定在【${storyState.worldSetting || "兴趣世界"}】的第 ${storyState.depthStage} 阶段这里先圆满结束本次探险啦！请布谷老师帮我总结一下今天在兴趣世界里探索到的新发现。`, true);
+            sendMessage(`我选择【结束本次】！请布谷老师用温暖生动的口吻，为我回顾今天在【${storyState.worldSetting || "兴趣世界"}】完成的 ${storyState.questCount} 个故事关卡、解开的考验与收获的奇遇总结。`, true);
         }
 
         function requestGrowthCard() {
@@ -2191,7 +3107,7 @@ ${storySummary}
             const eatenCount = dailyState.completedSubjects.length;
             if (eatenCount < 4 && !dailyState.growthCardUnlocked) {
                 const rem = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
-                alert(`🔒 今日成长卡尚未解锁哦！\n\n贪吃蛇尼克目前吃掉了 ${eatenCount}/4 颗果实，还需要完成【${rem.join("、")}】的探索，集齐全部 4 颗能量果实就能解锁今日成长卡啦！`);
+                alert(`🔒 今日成长卡尚未解锁哦！\n\n贪吃蛇尼克目前吃掉了 ${eatenCount}/4 颗果实，还需要完成【${rem.join("、")}】的探索（每科答对3道题），集齐全部 4 颗能量果实就能解锁今日成长卡啦！`);
                 return;
             }
 
@@ -2203,7 +3119,6 @@ ${storySummary}
             sendMessage(promptText, true);
         }
 
-        // ==================== 10. 图片上传（视觉理解）与图片生成 ====================
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -2245,9 +3160,10 @@ ${storySummary}
         }
 
         async function generateAiHeroBanner() {
-            const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
-            const baseUrl = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
-            const imgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL);
+            const imgCfg = getResolvedRouteConfig("image");
+            const apiKey = imgCfg.apiKey;
+            const baseUrl = imgCfg.baseUrl;
+            const imgModel = imgCfg.model;
 
             if (!apiKey || !imgModel) {
                 openModelModal();
@@ -2303,9 +3219,10 @@ ${storySummary}
         }
 
         async function requestStoryIllustration() {
-            const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
-            const baseUrl = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
-            const imgModel = localStorage.getItem(STORAGE_KEYS.IMAGE_MODEL);
+            const imgCfg = getResolvedRouteConfig("image");
+            const apiKey = imgCfg.apiKey;
+            const baseUrl = imgCfg.baseUrl;
+            const imgModel = imgCfg.model;
 
             if (!apiKey) {
                 alert("请先在右上角【⚙️ 模型设置】中填写并保存 API Key！");
@@ -2314,7 +3231,7 @@ ${storySummary}
             }
 
             if (!imgModel) {
-                const notice = "⚠️ 提示：当前尚未配置专门的图像生成模型。普通纯文本对话模型无法直接生成图片。\n\n如需开启故事插图生成，请点击右上角【⚙️ 模型设置】，在“生图模型名称”框中填入支持 `/images/generations` 接口的图像模型 ID 并保存后再试。";
+                const notice = "⚠️ 提示：当前尚未配置【2. 视觉生图通道】的生图模型。普通纯文本对话模型无法直接生成图片。\n\n如需开启故事插图生成，请点击右上角【⚙️ 模型设置】，在“2. 视觉生图通道”中填入支持 `/images/generations` 接口的生图地址与模型 ID 并保存后再试。";
                 appendMessageBubble(notice, "model");
                 return;
             }
@@ -2368,11 +3285,78 @@ ${storySummary}
             }
         }
 
-        // ==================== 11. 语音输入与中文朗读 ====================
+        let recognition = null;
+        let isRecognizing = false;
+        let voiceBaseText = "";
+
+        function toggleVoiceInput() {
+            if (isRecognizing) {
+                stopVoiceRecognition();
+                return;
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("当前浏览器未内置语音识别接口，你可以直接点选项按钮，或点击输入框旁键盘自带的【🎙️ 听写/语音】直接说话输入！");
+                document.getElementById("userInput").focus();
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = "zh-CN";
+            recognition.interimResults = true;
+            recognition.continuous = true;
+
+            voiceBaseText = document.getElementById("userInput").value;
+            if (voiceBaseText && !voiceBaseText.endsWith(" ")) voiceBaseText += " ";
+
+            isRecognizing = true;
+            document.getElementById("voiceStatusBar").classList.remove("hidden");
+            document.getElementById("micBtn").classList.add("bg-rose-500", "text-white", "animate-pulse");
+            document.getElementById("voiceStatusText").innerText = "🎙️ 正在聆听...说完可修改后再点发送";
+
+            recognition.onresult = (event) => {
+                let finalPart = "";
+                let interimPart = "";
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) finalPart += transcript;
+                    else interimPart += transcript;
+                }
+                if (finalPart) voiceBaseText += finalPart;
+                document.getElementById("userInput").value = voiceBaseText + interimPart;
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === "not-allowed") {
+                    document.getElementById("voiceStatusText").innerText = "⚠️ 麦克风权限未开启，可在设置中允许或使用键盘自带听写";
+                }
+            };
+
+            recognition.onend = () => {
+                stopVoiceRecognition();
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {
+                stopVoiceRecognition();
+            }
+        }
+
+        function stopVoiceRecognition() {
+            isRecognizing = false;
+            if (recognition) {
+                try { recognition.stop(); } catch (e) {}
+                recognition = null;
+            }
+            document.getElementById("voiceStatusBar").classList.add("hidden");
+            document.getElementById("micBtn").classList.remove("bg-rose-500", "text-white", "animate-pulse");
+        }
+
         function toggleTTS() {
             ttsEnabled = !ttsEnabled;
             const btn = document.getElementById("ttsToggleBtn");
-            btn.innerText = ttsEnabled ? "🔊 布谷老师朗读：已开启" : "🔇 布谷老师朗读：已关闭";
+            btn.innerText = ttsEnabled ? "🔊 布谷老师朗读：已开启" : "🔇 布谷老师朗读：已静音";
             if (!ttsEnabled && "speechSynthesis" in window) {
                 window.speechSynthesis.cancel();
             }
@@ -2382,306 +3366,337 @@ ${storySummary}
             if (!ttsEnabled || !("speechSynthesis" in window)) return;
             window.speechSynthesis.cancel();
             const cleanText = text
-                .replace(/\[.*?\]/g, "")
-                .replace(/[\u{1F600}-\u{1F6FF}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}*#`>]/gu, "");
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = "zh-CN";
-            utterance.rate = 1.02;
-            window.speechSynthesis.speak(utterance);
+                .replace(/\[CHOICES:.*?\]/gs, "")
+                .replace(/\[ANSWER:.*?\]/gs, "")
+                .replace(/\[SCENE:.*?\]/gs, "")
+                .replace(/\[CLUE:.*?\]/gs, "")
+                .replace(/\[STAGE_CHECKPOINT\]/gs, "")
+                .replace(/[*#`]/g, "")
+                .trim();
+            if (!cleanText) return;
+            const utter = new SpeechSynthesisUtterance(cleanText.slice(0, 260));
+            utter.lang = "zh-CN";
+            utter.rate = 1.02;
+            window.speechSynthesis.speak(utter);
         }
 
-        let recognition = null;
-        let isRecording = false;
-        if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = "zh-CN";
-            recognition.interimResults = true;
-            recognition.continuous = false;
+        function parseChoicesAndCleanText(rawText) {
+            let clean = rawText || "";
+            let choices = [];
 
-            recognition.onresult = (event) => {
-                let transcript = "";
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    transcript += event.results[i][0].transcript;
+            const choiceMatch = clean.match(/\[CHOICES:\s*(.*?)\]/i);
+            if (choiceMatch) {
+                choices = choiceMatch[1].split("|").map(s => s.trim()).filter(Boolean);
+                clean = clean.replace(/\[CHOICES:\s*.*?\]/gi, "").trim();
+            }
+
+            const answerMatch = clean.match(/\[ANSWER:\s*([A-Ca-c])\]/i);
+            const answerLetter = answerMatch ? answerMatch[1].toUpperCase() : null;
+            clean = clean.replace(/\[ANSWER:\s*[A-Ca-c]\]/gi, "").trim();
+
+            const sceneMatch = clean.match(/\[SCENE:\s*(.*?)\]/i);
+            if (sceneMatch) {
+                storyState.currentScene = sceneMatch[1].trim();
+                clean = clean.replace(/\[SCENE:\s*.*?\]/gi, "").trim();
+            }
+
+            const clueMatches = [...clean.matchAll(/\[CLUE:\s*(.*?)\]/gi)];
+            clueMatches.forEach(m => {
+                const clue = m[1].trim();
+                if (clue && !storyState.discoveredClues.includes(clue)) {
+                    storyState.discoveredClues.push(clue);
                 }
-                const inputEl = document.getElementById("userInput");
-                inputEl.value = transcript;
-                document.getElementById("voiceStatusText").innerText = "✨ 识别完成！你可以在下方输入框修改文字，确认无误后点“发送”";
-            };
-
-            recognition.onerror = (event) => {
-                stopVoiceUI();
-                const statusBar = document.getElementById("voiceStatusBar");
-                const statusText = document.getElementById("voiceStatusText");
-                statusBar.classList.remove("hidden");
-                const reasonMap = {
-                    "not-allowed": "未获得麦克风权限，也可以直接点输入框再用 iPad 键盘自带麦克风听写。",
-                    "no-speech": "没有听到声音哦，可以靠近一点再试，或直接点输入框用 iPad 键盘听写/打字。",
-                    "network": "浏览器语音服务暂时不可用，请直接点输入框用 iPad 键盘自带麦克风听写。"
-                };
-                statusText.innerText = `⚠️ 语音提示：${reasonMap[event.error] || "请直接点输入框用 iPad 键盘听写或打字"}`;
-                setTimeout(() => statusBar.classList.add("hidden"), 4500);
-            };
-
-            recognition.onend = () => {
-                stopVoiceUI();
-                const inputVal = document.getElementById("userInput").value.trim();
-                if (inputVal) {
-                    document.getElementById("userInput").focus();
-                    setTimeout(() => document.getElementById("voiceStatusBar").classList.add("hidden"), 3500);
-                } else {
-                    document.getElementById("voiceStatusBar").classList.add("hidden");
-                }
-            };
-        }
-
-        function toggleVoiceInput() {
-            if (!recognition) {
-                alert("可以直接点下方输入框，再点 iPad 键盘上的麦克风图标（🎙️）说话听写哦！");
-                document.getElementById("userInput").focus();
-                return;
-            }
-            if (isRecording) {
-                stopVoiceRecognition();
-            } else {
-                isRecording = true;
-                const btn = document.getElementById("micBtn");
-                btn.classList.add("bg-rose-500", "text-white", "animate-pulse");
-                btn.innerText = "⏹️";
-                const statusBar = document.getElementById("voiceStatusBar");
-                document.getElementById("voiceStatusText").innerText = "🎙️ 正在聆听你的声音...（说完点“完成说话”，识别后可修改再发送）";
-                statusBar.classList.remove("hidden");
-                try {
-                    recognition.start();
-                } catch (e) {
-                    stopVoiceUI();
-                }
-            }
-        }
-
-        function stopVoiceRecognition() {
-            if (recognition && isRecording) {
-                try { recognition.stop(); } catch (e) {}
-            }
-            stopVoiceUI();
-        }
-
-        function stopVoiceUI() {
-            isRecording = false;
-            const btn = document.getElementById("micBtn");
-            btn.classList.remove("bg-rose-500", "text-white", "animate-pulse");
-            btn.innerText = "🎤";
-        }
-
-        // ==================== 12. 真实模型调用与上下文通信 ====================
-        function handleKeyPress(e) {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                sendMessage();
-            }
-        }
-
-        function setSendingState(sending) {
-            isSendingRequest = sending;
-            const sendBtn = document.getElementById("sendBtn");
-            if (sendBtn) {
-                sendBtn.disabled = sending;
-                sendBtn.classList.toggle("opacity-60", sending);
-            }
-            document.querySelectorAll("#quickChoiceBar button").forEach(btn => {
-                btn.disabled = sending;
-                btn.classList.toggle("opacity-60", sending);
-                btn.classList.toggle("pointer-events-none", sending);
             });
+            clean = clean.replace(/\[CLUE:\s*.*?\]/gi, "").trim();
+
+            const hasCheckpoint = /\[STAGE_CHECKPOINT\]/i.test(clean);
+            clean = clean.replace(/\[STAGE_CHECKPOINT\]/gi, "").trim();
+
+            return { cleanText: clean, choices, answerLetter, hasCheckpoint };
         }
 
-        async function callChatCompletionWithFormatGuard(baseUrl, apiKey, modelName, apiMessages, sessionMode, isSummaryReq) {
-            const formatTail = isSummaryReq
-                ? ""
-                : "\n\n【输出格式与验算硬性要求】1. 若涉及计算，必须在倒数第二行写出 `[CALC: 分步算式 = 精确结果]` 并核对选项；2. 必须给出完整题干与 3 个具体候选答案（A、B、C），在正文中清晰写出题目和 3 个选项，并在最后一行严格输出：`[CHOICES: A. 选项一 | B. 选项二 | C. 选项三]`。";
+        function normalizeOptionCompareStr(str) {
+            return String(str || "")
+                .replace(/^[A-Da-d][\.．、\）\):：\s]+/, "")
+                .replace(/[“”"'`《》【】（）\(\)\s，。！？、：；]/g, "")
+                .trim()
+                .toLowerCase();
+        }
 
-            const msgsWithGuard = apiMessages.map((m, i) => {
-                if (i === apiMessages.length - 1 && m.role === "user" && formatTail) {
-                    if (Array.isArray(m.content)) {
-                        return {
-                            ...m,
-                            content: m.content.map(part => part.type === "text" ? { ...part, text: part.text + formatTail } : part)
-                        };
-                    }
-                    return { ...m, content: String(m.content) + formatTail };
-                }
-                return m;
-            });
+        function extractQuizFromReply(replyText, parsedChoices, parsedAnswerLetter) {
+            const optionsMap = {};
+            const letters = ["A", "B", "C"];
 
-            const doFetch = async (messagesPayload) => {
-                const resp = await fetch(`${baseUrl}/chat/completions`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: modelName,
-                        messages: messagesPayload,
-                        temperature: 0.55
-                    })
+            if (Array.isArray(parsedChoices) && parsedChoices.length >= 2) {
+                parsedChoices.slice(0, 3).forEach((opt, idx) => {
+                    const L = letters[idx];
+                    const body = opt.replace(/^[A-Da-d][\.．、\）\):：\s]+/, "").trim();
+                    if (body) optionsMap[L] = body;
                 });
-                const json = await resp.json();
-                return { resp, json };
-            };
-
-            let { resp, json } = await doFetch(msgsWithGuard);
-            if (!resp.ok || json.error || !json.choices?.[0]?.message) {
-                return { resp, json, parsed: null };
             }
 
-            let rawReply = json.choices[0].message.content || "";
-            let parsed = parseModelReply(rawReply, sessionMode);
-
-            let retryCount = 0;
-            while (!isSummaryReq && (parsed.missingOptions || parsed.choices.length < 3) && retryCount < 2) {
-                retryCount += 1;
-                const retryMessages = [
-                    ...msgsWithGuard,
-                    { role: "assistant", content: rawReply },
-                    {
-                        role: "user",
-                        content: "你刚才的回复缺少完整的题干或缺少 3 个明确选项（A、B、C）！请立刻重写这一轮回复：先给出完整题干，再清晰列出 3 个选项（A. ...、B. ...、C. ...），最后一行严格附上 `[CHOICES: A. 选项一 | B. 选项二 | C. 选项三]`。"
-                    }
-                ];
-                const retryRes = await doFetch(retryMessages);
-                if (retryRes.resp.ok && retryRes.json?.choices?.[0]?.message) {
-                    rawReply = retryRes.json.choices[0].message.content || "";
-                    const retryParsed = parseModelReply(rawReply, sessionMode);
-                    if (!retryParsed.missingOptions && retryParsed.choices.length >= 2) {
-                        resp = retryRes.resp;
-                        json = retryRes.json;
-                        parsed = retryParsed;
-                        break;
-                    }
+            if (Object.keys(optionsMap).length < 2) {
+                const lineMatches = replyText.matchAll(/(?:^|\n)\s*(?:\*\*)?([A-Ca-c])[\.．、\）\):：]\s*([^\n*]+)/g);
+                for (const m of lineMatches) {
+                    const L = m[1].toUpperCase();
+                    if (!optionsMap[L]) optionsMap[L] = m[2].trim();
                 }
             }
 
-            return { resp, json, parsed };
+            if (Object.keys(optionsMap).length < 2) return null;
+
+            let ans = parsedAnswerLetter;
+            if (!ans) {
+                const m1 = replyText.match(/(?:正确答案|正确选项|答案)(?:是|为|：|:)?\s*(?:\*\*)?([A-Ca-c])(?:\*\*)?/i);
+                if (m1) ans = m1[1].toUpperCase();
+            }
+            if (!ans || !optionsMap[ans]) {
+                ans = letters.find(L => Boolean(optionsMap[L])) || "A";
+            }
+
+            const qPart = replyText.split(/(?:^|\n)\s*(?:\*\*)?[A-Ca-c][\.．、\）\):：]/)[0].trim();
+            return {
+                question: qPart || replyText.slice(0, 120),
+                options: optionsMap,
+                answerLetter: ans
+            };
         }
 
-        async function sendMessage(overrideText = null, isSummaryReq = false) {
-            if (isSendingRequest) return;
-
-            const inputField = document.getElementById("userInput");
-            const rawText = overrideText !== null ? overrideText : inputField.value.trim();
-            const imageToSend = pendingImageBase64;
-
-            if (!rawText && !imageToSend) return;
-
-            if (rawText === "✨ 前往兴趣世界探险") {
-                switchMode("interest");
+        function renderQuickChoices(choices) {
+            const bar = document.getElementById("quickChoiceBar");
+            bar.innerHTML = "";
+            if (!choices || choices.length === 0) {
+                bar.classList.add("hidden");
                 return;
             }
-            if (rawText === "💌 生成今日成长卡") {
-                requestGrowthCard();
-                return;
-            }
-            if (rawText === "重新生成这道题 🔄" || rawText === "重新生成探索选项 🔄") {
-                const activeHist = currentMode === "base" ? baseChatHistory : interestChatHistory;
-                while (activeHist.length > 0 && activeHist[activeHist.length - 1].role === "assistant" && activeHist[activeHist.length - 1].missingOptions) {
-                    activeHist.pop();
-                    if (activeHist.length > 0 && activeHist[activeHist.length - 1].role === "user") {
-                        activeHist.pop();
+            bar.classList.remove("hidden");
+            choices.forEach(choiceText => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-900 border border-emerald-200 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-2xs transition cursor-pointer min-h-[42px] max-w-full sm:max-w-[340px] truncate";
+                btn.innerText = choiceText;
+                btn.title = choiceText;
+                btn.onclick = () => {
+                    if (currentMode === "base") {
+                        const subMatch = choiceText.match(/(数学|语文|英语|科学)/);
+                        if (subMatch) {
+                            const pickedSub = subMatch[1];
+                            dailyState.currentSubject = pickedSub;
+                            const cNum = dailyState.subjectCorrectCount[pickedSub] || 0;
+                            const isAlreadyDone = dailyState.completedSubjects.includes(pickedSub);
+                            if (!isAlreadyDone && cNum >= 3) {
+                                dailyState.status = "WAITING_CONFIRM";
+                            } else if (dailyState.status === "NOT_STARTED" || dailyState.status === "WAITING_CONFIRM") {
+                                dailyState.status = "IN_PROGRESS";
+                            }
+                            saveAllStates();
+                            syncStatusUI();
+                        }
                     }
+                    document.getElementById("userInput").value = choiceText;
+                    sendMessage();
+                };
+                bar.appendChild(btn);
+            });
+        }
+
+        function formatRichText(text) {
+            return String(text || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-gray-900">$1</strong>')
+                .replace(/\n/g, "<br>");
+        }
+
+        function appendMessageBubble(text, sender, customId = null, imageSrc = null, generatedImageSrc = null) {
+            const chatContainer = document.getElementById("chatContainer");
+            const msgDiv = document.createElement("div");
+            if (customId) msgDiv.id = customId;
+            msgDiv.className = `flex ${sender === "user" ? "justify-end" : "justify-start"} items-start gap-2.5`;
+
+            if (sender === "user") {
+                let imgHtml = "";
+                if (imageSrc) {
+                    imgHtml = `<img src="${imageSrc}" alt="上传图片" class="max-w-[200px] max-h-[180px] rounded-xl mb-1.5 border border-emerald-400/50 object-cover block">`;
                 }
-                saveAllStates();
-                const sub = dailyState.currentSubject || "当前学科";
-                const regenPrompt = currentMode === "base"
-                    ? `请重新出一道【${sub}】的选择题，必须给出完整题干和 3 个具体答案选项（A、B、C），并在最后一行包含 [CHOICES: A. ... | B. ... | C. ...]。`
-                    : `请重新生成当前【${storyState.worldSetting || "兴趣世界"}】场景的引导语和 3 个行动选项（A、B、C），并在最后一行包含 [CHOICES: A. ... | B. ... | C. ...]。`;
-                sendMessage(regenPrompt);
-                return;
-            }
-            if (rawText === "给我一点提示 💡" || rawText === "给我一点线索提示 💡") {
-                const sub = dailyState.currentSubject || "当前学科";
-                sendMessage(`请针对刚才那道【${sub}】问题给我一点思考提示，并同时写出原来的 3 个选项（A、B、C），最后一行附上 [CHOICES: A. ... | B. ... | C. ...]。`);
-                return;
+                msgDiv.innerHTML = `
+                    <div class="bg-emerald-600 text-white px-4 py-2.5 rounded-2xl rounded-tr-none max-w-[82%] text-sm leading-relaxed shadow-sm whitespace-pre-wrap">
+                        ${imgHtml}${formatRichText(text)}
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shrink-0 shadow-2xs">🧒</div>
+                `;
+            } else {
+                let genImgHtml = "";
+                if (generatedImageSrc) {
+                    genImgHtml = `<img src="${generatedImageSrc}" alt="故事插图" class="w-full max-w-[320px] rounded-xl mt-2 border border-purple-200 shadow-sm object-contain bg-white">`;
+                }
+                const isGrowthCard = text.includes("今日成长卡");
+                const cardStyle = isGrowthCard
+                    ? "bg-gradient-to-br from-amber-50 via-yellow-50 to-emerald-50 border-2 border-amber-300 text-gray-800 shadow-md"
+                    : "bg-gray-100 text-gray-800 border border-gray-200/70 shadow-2xs";
+                msgDiv.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-base shrink-0 shadow-2xs">🦉</div>
+                    <div class="${cardStyle} px-4 py-3 rounded-2xl rounded-tl-none max-w-[85%] text-sm leading-relaxed">
+                        ${formatRichText(text)}${genImgHtml}
+                    </div>
+                `;
             }
 
-            const subMatch = rawText.match(/(数学|语文|英语|科学)/);
-            if (subMatch && (rawText.includes("果实") || rawText.includes("挑战") || rawText.includes("进入【") || rawText.includes("按新进度测"))) {
-                if (currentMode !== "base") {
-                    currentMode = "base";
-                    switchMode("base");
-                }
-                dailyState.currentSubject = subMatch[1];
-                if (rawText.includes("按新进度测")) {
-                    startSubjectExplore(subMatch[1]);
-                    return;
-                }
-            }
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
 
-            const apiKey = localStorage.getItem(STORAGE_KEYS.API_KEY);
-            const baseUrl = localStorage.getItem(STORAGE_KEYS.BASE_URL) || "https://api.router.one/v1";
-            const modelName = localStorage.getItem(STORAGE_KEYS.MODEL) || "openai/gpt-5.6-luna";
+        function renderChatFromHistory() {
+            const chatContainer = document.getElementById("chatContainer");
+            chatContainer.innerHTML = "";
+            const history = currentMode === "base" ? baseChatHistory : interestChatHistory;
+            history.forEach(item => {
+                appendMessageBubble(
+                    item.content,
+                    item.role === "user" ? "user" : "model",
+                    null,
+                    item.image || null,
+                    item.generatedImage || null
+                );
+            });
+            const lastMsg = history[history.length - 1];
+            if (lastMsg && lastMsg.role === "assistant" && Array.isArray(lastMsg.choices) && lastMsg.choices.length > 0) {
+                renderQuickChoices(lastMsg.choices);
+            } else {
+                renderQuickChoices([]);
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === "Enter") sendMessage();
+        }
+
+        async function sendMessage(overrideText = null, skipQuestionGeneration = false) {
+            if (isSendingRequest) return;
+            stopVoiceRecognition();
+
+            const inputEl = document.getElementById("userInput");
+            const rawText = overrideText !== null ? overrideText : inputEl.value.trim();
+            const hasImage = Boolean(pendingImageBase64);
+
+            if (!rawText && !hasImage) return;
+
+            const routeType = currentMode === "interest" ? "interest" : "chat";
+            const activeCfg = getResolvedRouteConfig(routeType);
+            const apiKey = activeCfg.apiKey;
+            const baseUrl = activeCfg.baseUrl;
+            const model = activeCfg.model;
 
             if (!apiKey) {
-                alert("请先点击右上角【⚙️ 模型设置】，输入并保存你的 API Key！");
+                alert("请先点击右上角【⚙️ 模型设置】，填入你的 API 密钥 (sk-...) 再开始和布谷老师探索哦！");
                 openModelModal();
                 return;
             }
 
-            setSendingState(true);
+            isSendingRequest = true;
+            const sendBtn = document.getElementById("sendBtn");
+            sendBtn.disabled = true;
 
-            const userText = rawText || "请布谷老师看看我上传的这张图片，和我一起观察聊一聊！";
-            if (overrideText === null) inputField.value = "";
-            clearPendingImage();
-            document.getElementById("voiceStatusBar").classList.add("hidden");
+            const displayUserText = rawText || "📷 发来了一张图片，请布谷老师和尼克一起看看！";
+            const attachedImg = pendingImageBase64;
+            if (overrideText === null) inputEl.value = "";
+            if (hasImage) clearPendingImage();
 
-            const sessionMode = currentMode;
-            const activeSubjectAtSend = dailyState.currentSubject;
+            const currentHist = currentMode === "base" ? baseChatHistory : interestChatHistory;
 
-            if (sessionMode === "base" && !isSummaryReq) {
-                if (!dailyState.currentSubject) {
-                    const remaining = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
-                    dailyState.currentSubject = remaining[0] || "数学";
+            const isHiddenSystemPrompt = overrideText !== null && (
+                rawText.startsWith("请从【") ||
+                rawText.startsWith("我选择继续留在【") ||
+                rawText.startsWith("请换一道全新的【") ||
+                rawText.startsWith("请针对当前这道【") ||
+                rawText.startsWith("请为我开启一段完整的【") ||
+                rawText.startsWith("我选择【继续挑战】")
+            );
+
+            if (!isHiddenSystemPrompt) {
+                if (currentMode === "base") {
+                    const explicitSubMatch = displayUserText.match(/(?:进入|挑战|切换|去|测|选|学|换)?\s*【?(数学|语文|英语|科学)】?(?:果实|探索|题|科目)?/);
+                    if (explicitSubMatch && (displayUserText.includes("果实") || displayUserText.includes("进入") || displayUserText.includes("挑战") || displayUserText.includes("切换") || displayUserText.includes("测"))) {
+                        const subPicked = explicitSubMatch[1];
+                        dailyState.currentSubject = subPicked;
+                        const cNum = dailyState.subjectCorrectCount[subPicked] || 0;
+                        const isAlreadyDone = dailyState.completedSubjects.includes(subPicked);
+                        if (!isAlreadyDone && cNum >= 3) {
+                            dailyState.status = "WAITING_CONFIRM";
+                        } else if (dailyState.status === "NOT_STARTED" || dailyState.status === "WAITING_CONFIRM") {
+                            dailyState.status = "IN_PROGRESS";
+                        }
+                        saveAllStates();
+                        syncStatusUI();
+                    }
                 }
-                if (dailyState.status === "NOT_STARTED" || dailyState.status === "WAITING_CONFIRM") {
-                    dailyState.status = "IN_PROGRESS";
-                }
-                const curSub = dailyState.currentSubject;
-                dailyState.subjectTurns[curSub] = (dailyState.subjectTurns[curSub] || 0) + 1;
-            } else if (sessionMode === "interest" && !isSummaryReq) {
-                storyState.stageTurns = (storyState.stageTurns || 0) + 1;
-                storyState.waitingNodeChoice = false;
+                currentHist.push({
+                    role: "user",
+                    content: displayUserText,
+                    image: attachedImg || null
+                });
+                appendMessageBubble(displayUserText, "user", null, attachedImg || null);
             }
 
-            const activeHistory = sessionMode === "base" ? baseChatHistory : interestChatHistory;
-            activeHistory.push({
-                role: "user",
-                content: userText,
-                uploadedImage: imageToSend || null
-            });
-            saveAllStates();
-            syncStatusUI();
-            renderChatFromHistory();
+            let evalResult = null;
+            let activeQuizForEval = dailyState.activeQuiz;
+            if (!activeQuizForEval && currentMode === "base" && !isHiddenSystemPrompt) {
+                for (let idx = currentHist.length - 1; idx >= 0; idx--) {
+                    const m = currentHist[idx];
+                    if (m && m.role === "assistant") {
+                        const extracted = extractQuizFromAssistantMessage(m.content, m.choices);
+                        if (extracted) {
+                            activeQuizForEval = extracted;
+                            break;
+                        }
+                    }
+                }
+            }
 
-            updateSnakeUI(sessionMode === "base" ? "discovery" : "exploring", "布谷老师正在认真倾听，尼克也在竖起耳朵听呢...");
+            if (currentMode === "base" && !isHiddenSystemPrompt && activeQuizForEval) {
+                evalResult = judgeUserChoiceDeterministic(rawText, activeQuizForEval);
+                if (evalResult && dailyState.currentSubject) {
+                    const sub = dailyState.currentSubject;
+                    dailyState.subjectTurns[sub] = (dailyState.subjectTurns[sub] || 0) + 1;
+                    if (evalResult.isCorrect === true) {
+                        dailyState.subjectCorrectCount[sub] = (dailyState.subjectCorrectCount[sub] || 0) + 1;
+                    }
+                    dailyState.activeQuiz = null;
+                    saveAllStates();
+                    syncStatusUI();
+                }
+            }
 
-            const loadingId = "loading-" + Date.now();
-            appendMessageBubble("布谷老师正在思考怎么回应你...", "model", loadingId);
+            if (currentMode === "interest" && !isHiddenSystemPrompt && storyState.worldSetting) {
+                const isChoiceOrAnswer = /^[A-Ca-c](?:[\.．、\）\):：\s]|$)|^我选|^选|^答案/.test(rawText.trim());
+                if (isChoiceOrAnswer || rawText.trim().length > 0) {
+                    storyState.questCount = (storyState.questCount || 0) + 1;
+                    if (storyState.questCount >= (storyState.questTarget || 5)) {
+                        storyState.waitingNodeChoice = true;
+                    }
+                    saveAllStates();
+                    syncStatusUI();
+                }
+            }
+
+            const typingId = "typing-" + Date.now();
+            const routeTag = currentMode === "interest"
+                ? (activeCfg.isDedicated ? `兴趣通道·${model}` : `基础通道·${model}`)
+                : `基础通道·${model}`;
+            appendMessageBubble(`布谷老师（${routeTag}）正在思考中...`, "model", typingId);
 
             try {
-                const apiMessages = [
-                    { role: "system", content: buildSystemPrompt() }
-                ];
+                const apiMessages = [{ role: "system", content: buildSystemPrompt() }];
 
-                const cleanHistory = activeHistory.filter(item => !(item.role === "assistant" && item.missingOptions));
-                const recentTurns = cleanHistory.slice(-14);
-                recentTurns.forEach((item, idx) => {
-                    const isLastUserWithImg = (idx === recentTurns.length - 1) && item.role === "user" && item.uploadedImage;
-                    if (isLastUserWithImg) {
+                const recentHist = currentHist.slice(-10);
+                recentHist.forEach(item => {
+                    if (item.image) {
                         apiMessages.push({
-                            role: "user",
+                            role: item.role === "user" ? "user" : "assistant",
                             content: [
-                                { type: "text", text: item.content },
-                                { type: "image_url", image_url: { url: item.uploadedImage } }
+                                { type: "text", text: item.content || "请观察这张图片" },
+                                { type: "image_url", image_url: { url: item.image } }
                             ]
                         });
                     } else {
@@ -2692,328 +3707,205 @@ ${storySummary}
                     }
                 });
 
-                const { resp: response, json: data, parsed } = await callChatCompletionWithFormatGuard(
-                    baseUrl,
-                    apiKey,
-                    modelName,
-                    apiMessages,
-                    sessionMode,
-                    isSummaryReq
-                );
+                if (isHiddenSystemPrompt) {
+                    apiMessages.push({
+                        role: "user",
+                        content: rawText
+                    });
+                } else if (currentMode === "base" && evalResult) {
+                    const sub = dailyState.currentSubject || "当前学科";
+                    const cCount = dailyState.subjectCorrectCount[sub] || 0;
+                    const reachedThree = !dailyState.completedSubjects.includes(sub) && cCount >= 3;
 
-                const loadEl = document.getElementById(loadingId);
-                if (loadEl) loadEl.remove();
+                    if (evalResult.isCorrect === true) {
+                        apiMessages.push({
+                            role: "system",
+                            content: `【系统确定性判题结果】：孩子选择了【${evalResult.chosenLetter}】，**回答正确**！当前【${sub}】本轮真实答对题数为 ${cCount} 题。${reachedThree ? `【重要指令】：本【${sub}】已答对满 3 题，满足点亮【${sub}】能量果实的条件！请热情表扬孩子，并引导孩子点击下方的“🍎 吃掉果实，继续下一科”或“🔍 再挑战一道升级题”按钮做选择，本轮不要再出下一题或切换其他学科！` : `请简短表扬并点明关键思路，随后紧接着出一道【${sub}】新选择题（不要重复已出过的题目，末尾附 [ANSWER: 字母] 和 [CHOICES: A. ... | B. ... | C. ...]）。`}`
+                        });
+                    } else if (evalResult.isCorrect === false) {
+                        apiMessages.push({
+                            role: "system",
+                            content: `【系统确定性判题结果】：孩子选择了【${evalResult.chosenLetter}】，**回答错误**。本系统已核对的唯一正确答案是【${evalResult.correctLetter}（${evalResult.correctText}）】。请你**严格以【${evalResult.correctLetter}】为正确答案**进行温柔鼓励与清晰讲解，并出一道【${sub}】同知识点巩固选择题（末尾附 [ANSWER: 字母] 和 [CHOICES: A. ... | B. ... | C. ...]）。`
+                        });
+                    } else {
+                        apiMessages.push({
+                            role: "system",
+                            content: `【系统记录】：孩子选择了【${evalResult.chosenLetter}】。请结合孩子刚才看到的题目选项，先判断对错并给出清晰鼓励与解析，然后继续推进【${sub}】探索（末尾附 [ANSWER: 字母] 和 [CHOICES: A. ... | B. ... | C. ...]）。`
+                        });
+                    }
+                }
 
-                if (!response.ok || data.error) {
-                    const errMsg = data.error?.message || `请求失败（HTTP ${response.status}）`;
-                    appendErrorWithRetry(`连接布谷老师出错：${errMsg}`, userText, imageToSend);
-                    updateSnakeUI("companion", "哎呀，信号遇到了一点小阻碍，点“重试”再发一次吧。");
+                const response = await fetch(`${baseUrl}/chat/completions`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: apiMessages,
+                        temperature: 0.72
+                    })
+                });
+
+                const data = await response.json();
+                const typingEl = document.getElementById(typingId);
+                if (typingEl) typingEl.remove();
+
+                if (!response.ok) {
+                    const errMsg = data.error?.message || `HTTP ${response.status} 请求失败`;
+                    appendMessageBubble(`❌ 布谷老师遇到了一点网络小状况：${errMsg}\n\n请检查右上角【⚙️ 模型设置】中的接口地址、模型名称与 API 密钥是否正确。`, "model");
                     return;
                 }
 
-                if (parsed) {
-                    if (parsed.newScene) storyState.currentScene = parsed.newScene;
-                    if (parsed.newClue && !storyState.discoveredClues.includes(parsed.newClue)) {
-                        storyState.discoveredClues.push(parsed.newClue);
-                    }
+                const rawReply = data.choices?.[0]?.message?.content || "布谷老师刚刚走神了一下，我们再试一次吧！";
+                const { cleanText, choices, answerLetter, hasCheckpoint } = parseChoicesAndCleanText(rawReply);
 
-                    const targetSub = dailyState.currentSubject || activeSubjectAtSend;
-                    if (sessionMode === "base" && !isSummaryReq && targetSub) {
-                        const turns = dailyState.subjectTurns[targetSub] || 0;
-                        const notYetEaten = !dailyState.completedSubjects.includes(targetSub);
-                        if (notYetEaten && ((parsed.subjectDone && turns >= 2) || turns >= 3)) {
-                            dailyState.status = "WAITING_CONFIRM";
-                        }
-                    }
+                const subNow = dailyState.currentSubject;
+                const reachedThreeNow = currentMode === "base" && subNow && !dailyState.completedSubjects.includes(subNow) && (dailyState.subjectCorrectCount[subNow] || 0) >= 3;
 
-                    if (sessionMode === "interest" && !isSummaryReq && dailyState.completedSubjects.length >= 4) {
-                        if ((parsed.stageCheckpoint && storyState.stageTurns >= 2) || storyState.stageTurns >= 4) {
-                            storyState.waitingNodeChoice = true;
-                        }
-                    }
-
-                    activeHistory.push({
-                        role: "assistant",
-                        content: parsed.fullDisplayText,
-                        choices: parsed.choices,
-                        missingOptions: parsed.missingOptions
-                    });
-
-                    saveAllStates();
-                    syncStatusUI();
-                    renderChatFromHistory();
-                    speakText(parsed.fullDisplayText);
-
-                    if (dailyState.status === "WAITING_CONFIRM" && currentMode === "base") {
-                        updateSnakeUI("growing", `太棒啦！你完成了【${targetSub}】探索，快点下方按钮让尼克吃掉这颗果实吧！`);
-                    } else if (storyState.waitingNodeChoice && currentMode === "interest") {
-                        updateSnakeUI("exploring", "这一阶段的冒险告一段落啦！你可以选择继续挑战更高难度，或者结束本次探险~");
-                    } else if (currentMode === "interest") {
-                        updateSnakeUI("exploring", "探险越来越深入啦！看看布谷老师带来的新线索吧~");
+                let finalChoices = choices;
+                if (currentMode === "base" && !skipQuestionGeneration) {
+                    if (reachedThreeNow) {
+                        dailyState.status = "WAITING_CONFIRM";
+                        dailyState.activeQuiz = null;
+                        finalChoices = [];
                     } else {
-                        updateSnakeUI("discovery", "很有想法！继续和布谷老师聊下去，尼克马上就能吃到果实啦~");
+                        const extractedQuiz = extractQuizFromReply(cleanText, choices, answerLetter);
+                        if (extractedQuiz && subNow) {
+                            const verifiedAns = subNow === "数学"
+                                ? verifyMathQuizHard(extractedQuiz.question, extractedQuiz.options, extractedQuiz.answerLetter)
+                                : extractedQuiz.answerLetter;
+
+                            dailyState.activeQuiz = {
+                                subject: subNow,
+                                question: extractedQuiz.question,
+                                options: extractedQuiz.options,
+                                answerLetter: verifiedAns || extractedQuiz.answerLetter
+                            };
+
+                            if (!dailyState.askedQuestions[subNow]) dailyState.askedQuestions[subNow] = [];
+                            const qDigest = extractedQuiz.question.replace(/\s+/g, "").slice(0, 60);
+                            if (qDigest && !dailyState.askedQuestions[subNow].includes(qDigest)) {
+                                dailyState.askedQuestions[subNow].push(qDigest);
+                            }
+                        }
+
+                        if ((!finalChoices || finalChoices.length === 0) && extractedQuiz) {
+                            finalChoices = ["A", "B", "C"]
+                                .filter(L => extractedQuiz.options[L])
+                                .map(L => `${L}. ${extractedQuiz.options[L]}`);
+                        }
                     }
-                } else {
-                    appendErrorWithRetry("模型返回的数据格式异常，未包含有效回复。", userText, imageToSend);
                 }
-            } catch (error) {
-                const loadEl = document.getElementById(loadingId);
-                if (loadEl) loadEl.remove();
-                appendErrorWithRetry(`网络连接异常：${error.message}`, userText, imageToSend);
-                updateSnakeUI("companion", "网络好像断了一下，检查网络后点重试吧~");
+
+                if (currentMode === "interest" && !skipQuestionGeneration) {
+                    if (hasCheckpoint || (storyState.questCount >= (storyState.questTarget || 5))) {
+                        storyState.waitingNodeChoice = true;
+                        finalChoices = [];
+                    } else if (!finalChoices || finalChoices.length === 0) {
+                        const extractedStoryQuiz = extractQuizFromReply(cleanText, choices, answerLetter);
+                        if (extractedStoryQuiz) {
+                            finalChoices = ["A", "B", "C"]
+                                .filter(L => extractedStoryQuiz.options[L])
+                                .map(L => `${L}. ${extractedStoryQuiz.options[L]}`);
+                        }
+                    }
+                }
+
+                currentHist.push({
+                    role: "assistant",
+                    content: cleanText,
+                    choices: finalChoices
+                });
+
+                saveAllStates();
+                syncStatusUI();
+                renderChatFromHistory();
+                speakText(cleanText);
+            } catch (err) {
+                const typingEl = document.getElementById(typingId);
+                if (typingEl) typingEl.remove();
+                appendMessageBubble(`❌ 连接模型服务时出错：${err.message}\n\n请检查网络或右上角【⚙️ 模型设置】。`, "model");
             } finally {
-                setSendingState(false);
+                isSendingRequest = false;
+                sendBtn.disabled = false;
             }
         }
 
-        function parseModelReply(rawText, modeForReply = currentMode) {
-            let cleanText = rawText || "";
-            let subjectDone = false;
-            let stageCheckpoint = false;
-            let newScene = "";
-            let newClue = "";
-            let choices = [];
-            let missingOptions = false;
+        // ==================== 单路通道独立测试函数 ====================
+        async function testSingleRoute(routeType) {
+            const btnId = routeType === "interest" ? "testInterestBtn" : "testChatBtn";
+            const btn = document.getElementById(btnId);
+            const fb = document.getElementById("modelSaveFeedback");
 
-            cleanText = cleanText.replace(/[\[【]\s*CALC\s*[:：][\s\S]*?[\]】]/gi, "").trim();
+            let baseUrl = "";
+            let model = "";
+            let apiKey = "";
 
-            if (/\[(SUBJECT_DONE|SUGGEST_FINISH)\]/i.test(cleanText)) {
-                subjectDone = true;
-                cleanText = cleanText.replace(/\[(SUBJECT_DONE|SUGGEST_FINISH)\]/gi, "").trim();
-            }
-
-            if (/\[STAGE_CHECKPOINT\]/i.test(cleanText)) {
-                stageCheckpoint = true;
-                cleanText = cleanText.replace(/\[STAGE_CHECKPOINT\]/gi, "").trim();
-            }
-
-            const sceneMatch = cleanText.match(/\[SCENE:\s*(.*?)\]/i);
-            if (sceneMatch) {
-                newScene = sceneMatch[1].trim();
-                cleanText = cleanText.replace(sceneMatch[0], "").trim();
-            }
-
-            const clueMatch = cleanText.match(/\[CLUE:\s*(.*?)\]/i);
-            if (clueMatch) {
-                newClue = clueMatch[1].trim();
-                cleanText = cleanText.replace(clueMatch[0], "").trim();
-            }
-
-            const choicesMatch = cleanText.match(/[\[【]\s*CHOICES\s*[:：]\s*([\s\S]*?)[\]】]/i);
-            if (choicesMatch) {
-                choices = choicesMatch[1]
-                    .split(/[|｜\n]/)
-                    .map(s => s.replace(/^[-*•]\s*/, "").trim())
-                    .filter(Boolean);
-                cleanText = cleanText.replace(choicesMatch[0], "").trim();
-            }
-
-            if (choices.length === 0) {
-                const lines = cleanText.split("\n");
-                const extracted = [];
-                lines.forEach(line => {
-                    const trimmed = line.trim();
-                    if (/^(?:[-*•]\s*)?(?:[A-Da-d][\.\．、\)）:：]|[1-4][\.\．、\)）]|[①②③④])\s*\S+/.test(trimmed)) {
-                        extracted.push(trimmed.replace(/^[-*•]\s*/, ""));
-                    }
-                });
-                if (extracted.length >= 2) {
-                    choices = extracted;
-                }
-            }
-
-            let fullDisplayText = cleanText;
-
-            if (choices.length > 0) {
-                const hasInlineOptions = choices.every(opt => {
-                    const shortLabel = opt.replace(/^[A-Da-d][\.\．、\)）:：]\s*/, "").trim();
-                    return shortLabel && cleanText.includes(shortLabel);
-                });
-                if (!hasInlineOptions) {
-                    const optionsBlock = choices.map((opt, idx) => {
-                        const letter = ["A", "B", "C", "D"][idx] || String(idx + 1);
-                        const normalized = /^[A-Da-d][\.\．、\)）:：]/.test(opt) ? opt : `${letter}. ${opt}`;
-                        return `**${normalized}**`;
-                    }).join("\n");
-                    fullDisplayText = `${cleanText}\n\n${optionsBlock}`.trim();
-                }
-            }
-
-            if (choices.length === 0) {
-                missingOptions = true;
-                if (modeForReply === "base") {
-                    choices = ["重新生成这道题 🔄", "给我一点提示 💡"];
-                } else {
-                    choices = ["重新生成探索选项 🔄", "给我一点线索提示 💡"];
-                }
-            }
-
-            return { cleanText, fullDisplayText, subjectDone, stageCheckpoint, newScene, newClue, choices, missingOptions };
-        }
-
-        // ==================== 13. 聊天记录渲染与对话框上方横向快捷选项栏 ====================
-        function renderQuickChoiceBar(choices) {
-            const bar = document.getElementById("quickChoiceBar");
-            if (!bar) return;
-
-            if (!choices || choices.length === 0) {
-                bar.classList.add("hidden");
-                bar.innerHTML = "";
-                return;
-            }
-
-            const pillStyles = [
-                "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200",
-                "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-200",
-                "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200",
-                "bg-purple-600 hover:bg-purple-700 text-white shadow-purple-200"
-            ];
-
-            bar.innerHTML = "";
-            choices.forEach((optText, idx) => {
-                const btn = document.createElement("button");
-                btn.type = "button";
-                btn.className = `${pillStyles[idx % pillStyles.length]} px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold shadow-sm transition transform active:scale-95 cursor-pointer flex items-center gap-1.5 min-h-[44px]`;
-                btn.innerText = optText;
-                btn.onclick = () => {
-                    if (isSendingRequest) return;
-                    sendMessage(optText);
-                };
-                bar.appendChild(btn);
-            });
-            bar.classList.remove("hidden");
-        }
-
-        function formatRichBubbleText(rawText) {
-            const escaped = escapeHtml(rawText);
-            const lines = escaped.split("\n");
-            return lines.map(line => {
-                const trimmed = line.trim();
-                if (trimmed === "---" || trimmed === "***") {
-                    return `<hr class="my-2 border-emerald-200/70">`;
-                }
-                if (trimmed.startsWith("&gt;")) {
-                    const quoteBody = trimmed.replace(/^&gt;\s*/, "").replace(/\*\*(.+?)\*\*/g, '<strong class="text-emerald-900 font-extrabold">$1</strong>');
-                    return `<div class="my-1.5 pl-3 py-1 border-l-4 border-emerald-400 bg-white/80 rounded-r-lg font-bold text-emerald-900">${quoteBody}</div>`;
-                }
-                const withBold = line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-gray-900 font-extrabold">$1</strong>');
-                return `<div>${withBold || "&nbsp;"}</div>`;
-            }).join("");
-        }
-
-        function renderChatFromHistory() {
-            const container = document.getElementById("chatContainer");
-            container.innerHTML = "";
-            const activeHistory = currentMode === "base" ? baseChatHistory : interestChatHistory;
-
-            if (activeHistory.length === 0 && currentMode === "interest") {
-                const eaten = dailyState.completedSubjects.length;
-                const rem = ["数学", "语文", "英语", "科学"].filter(s => !dailyState.completedSubjects.includes(s));
-                const intro = eaten >= 4
-                    ? `✨ 恭喜集齐4科能量果实，兴趣世界已完全解锁！\n\n在这里，布谷老师会结合你【${learnerProfile.grade}${learnerProfile.term || "上册"}】学过的课本知识，带着贪吃蛇尼克向更深、更有挑战的拓展领域进发，你也可以随时自由提问或编故事！`
-                    : `🌱 这里是兴趣世界预览区！目前贪吃蛇尼克已吃掉 **${eaten}/4** 颗学科果实。集齐【数学、语文、英语、科学】全部 4 颗果实后，就能开启完整自由的兴趣探险啦！`;
-                appendMessageBubble(intro, "model");
-                if (eaten >= 4) {
-                    renderQuickChoiceBar(["🦕 探索恐龙世界", "🐉 探索神话世界", "🪄 探索魔法奇幻", "🌿 探索自然奥秘"]);
-                } else {
-                    renderQuickChoiceBar(rem.map(s => `🍎 去收集【${s}】果实`));
-                }
-                return;
-            }
-
-            let latestAssistantChoices = [];
-            activeHistory.forEach((msg, idx) => {
-                if (msg.role === "user") {
-                    appendMessageBubble(msg.content, "user", "", msg.uploadedImage);
-                } else {
-                    let displayContent = msg.content;
-                    if (msg.missingOptions && currentMode === "base") {
-                        displayContent += "\n\n⚠️ 本轮未检测到完整题目选项，可点击下方按钮重新生成题目或获取提示。";
-                    }
-                    appendMessageBubble(displayContent, "model", "", null, msg.generatedImage);
-                    if (idx === activeHistory.length - 1) {
-                        latestAssistantChoices = msg.choices || [];
-                    }
-                }
-            });
-
-            renderQuickChoiceBar(latestAssistantChoices);
-        }
-
-        function appendMessageBubble(text, sender, customId = "", uploadedImg = null, generatedImg = null) {
-            const chatContainer = document.getElementById("chatContainer");
-            const div = document.createElement("div");
-            if (customId) div.id = customId;
-
-            if (sender === "user") {
-                div.className = "flex justify-end gap-2.5";
-                let imgHtml = uploadedImg ? `<img src="${uploadedImg}" class="max-w-[200px] max-h-[180px] rounded-xl mb-2 border border-emerald-400/50 object-cover">` : "";
-                div.innerHTML = `
-                    <div class="bg-emerald-600 text-white px-4 py-2.5 rounded-2xl rounded-tr-none max-w-[82%] text-sm shadow-xs leading-relaxed">
-                        ${imgHtml}
-                        <div>${escapeHtml(text)}</div>
-                    </div>
-                    <div class="w-8 h-8 shrink-0 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs shadow-2xs">我</div>
-                `;
+            if (routeType === "interest") {
+                baseUrl = (document.getElementById("interestBaseUrlInput").value.trim() || document.getElementById("chatBaseUrlInput").value.trim() || routeConfigs.chat.baseUrl || "https://api.deepseek.com/v1").replace(/\/+$/, "");
+                model = document.getElementById("interestModelInput").value.trim() || document.getElementById("chatModelInput").value.trim() || routeConfigs.chat.model || "deepseek-chat";
+                const rawIntKey = document.getElementById("interestApiKeyInput").value.trim();
+                const rawChatKey = document.getElementById("chatApiKeyInput").value.trim();
+                apiKey = (rawIntKey && !rawIntKey.includes("*"))
+                    ? rawIntKey
+                    : (routeConfigs.interest.apiKey || ((rawChatKey && !rawChatKey.includes("*")) ? rawChatKey : routeConfigs.chat.apiKey));
             } else {
-                div.className = "flex items-start gap-2.5";
-                let genImgHtml = generatedImg ? `<div class="mt-2.5"><img src="${generatedImg}" alt="故事插图" class="max-w-full sm:max-w-[340px] rounded-xl border border-purple-200 shadow-sm"></div>` : "";
-                const richHtml = formatRichBubbleText(text);
-
-                div.innerHTML = `
-                    <div class="w-8 h-8 shrink-0 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm shadow-xs" title="布谷老师">🦉</div>
-                    <div class="bg-emerald-50/90 text-gray-800 px-4 py-3 rounded-2xl rounded-tl-none max-w-[86%] text-sm shadow-xs border border-emerald-100 leading-relaxed space-y-0.5">
-                        <div class="text-[11px] font-bold text-amber-700 mb-1">布谷老师</div>
-                        ${richHtml}
-                        ${genImgHtml}
-                    </div>
-                `;
+                baseUrl = (document.getElementById("chatBaseUrlInput").value.trim() || "https://api.deepseek.com/v1").replace(/\/+$/, "");
+                model = document.getElementById("chatModelInput").value.trim() || "deepseek-chat";
+                const rawChatKey = document.getElementById("chatApiKeyInput").value.trim();
+                apiKey = (rawChatKey && !rawChatKey.includes("*")) ? rawChatKey : routeConfigs.chat.apiKey;
             }
 
-            chatContainer.appendChild(div);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function appendErrorWithRetry(errorText, retryText, retryImg) {
-            const chatContainer = document.getElementById("chatContainer");
-            const div = document.createElement("div");
-            div.className = "flex items-start gap-2.5";
-            const safeRetry = escapeHtml(retryText).replace(/'/g, "\\'");
-
-            div.innerHTML = `
-                <div class="w-8 h-8 shrink-0 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-xs shadow-xs">!</div>
-                <div class="bg-rose-50 text-rose-800 px-4 py-3 rounded-2xl rounded-tl-none max-w-[85%] text-xs sm:text-sm shadow-xs border border-rose-200 whitespace-pre-wrap leading-relaxed">
-                    <div>${escapeHtml(errorText)}</div>
-                    <button type="button" onclick="retryFailedMessage('${safeRetry}')" class="mt-2 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer">🔄 重新发送</button>
-                </div>
-            `;
-            window._lastFailedImage = retryImg || null;
-            chatContainer.appendChild(div);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function retryFailedMessage(text) {
-            if (window._lastFailedImage) {
-                pendingImageBase64 = window._lastFailedImage;
+            if (!apiKey) {
+                fb.classList.remove("hidden", "bg-emerald-50", "text-emerald-800");
+                fb.classList.add("bg-rose-50", "text-rose-700");
+                fb.innerText = "❌ 请先填写对应通道的 API 密钥 (sk-...) 再测试！";
+                return;
             }
-            sendMessage(text);
+
+            const oldBtnText = btn.innerText;
+            btn.innerText = "⏳ 测试中...";
+            btn.disabled = true;
+            fb.classList.remove("hidden", "bg-emerald-50", "text-emerald-800", "bg-rose-50", "text-rose-700");
+            fb.classList.add("bg-blue-50", "text-blue-700");
+            fb.innerText = `正在测试【${routeType === "interest" ? "兴趣世界" : "基础对话"}】通道（${model}）...`;
+
+            try {
+                const res = await fetch(`${baseUrl}/chat/completions`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [{ role: "user", content: "你好，请用一句话回复测试成功。" }],
+                        max_tokens: 40
+                    })
+                });
+                const data = await res.json();
+                fb.classList.remove("bg-blue-50", "text-blue-700");
+                if (res.ok && data.choices?.[0]?.message?.content) {
+                    fb.classList.add("bg-emerald-50", "text-emerald-800");
+                    fb.innerText = `✅ 【${routeType === "interest" ? "兴趣世界" : "基础对话"}】测试成功！模型回复：${data.choices[0].message.content.trim()}`;
+                } else {
+                    fb.classList.add("bg-rose-50", "text-rose-700");
+                    fb.innerText = `❌ 测试失败：${data.error?.message || "HTTP " + res.status}`;
+                }
+            } catch (e) {
+                fb.classList.remove("bg-blue-50", "text-blue-700");
+                fb.classList.add("bg-rose-50", "text-rose-700");
+                fb.innerText = `❌ 网络或接口请求错误：${e.message}`;
+            } finally {
+                btn.innerText = oldBtnText;
+                btn.disabled = false;
+            }
         }
 
-        function escapeHtml(text) {
-            return String(text)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
-        }
-
-        // 启动初始化
         loadAllStates();
         initBaseWelcome();
     </script>
 </body>
-</html>'''
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print("Saved index.html successfully. Length:", len(html_content))
+</html>
